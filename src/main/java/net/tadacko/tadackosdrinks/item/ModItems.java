@@ -112,12 +112,12 @@ public class ModItems {
             { @Override public int getMaxStackSize(ItemStack stack) { return stackSizeDrink; } });
     public static final RegistryObject<Item> BEER_BARLEY_GLASS = ITEMS.register("beer_barley_glass",
             () -> new DrinkItem(new Item.Properties()
-                    .food(new FoodProperties.Builder().alwaysEat().build()), MobEffects.DAMAGE_RESISTANCE, 1, 0,
+                    .food(new FoodProperties.Builder().alwaysEat().build()), MobEffects.DAMAGE_RESISTANCE, 1, 1,
                     0.5, DrinkVariant.BEER, BEER_GLASS_EMPTY.get())
             { @Override public int getMaxStackSize(ItemStack stack) { return stackSizeDrink; } });
     public static final RegistryObject<Item> BEER_BARLEY_HOPPED_GLASS = ITEMS.register("beer_barley_hopped_glass",
             () -> new DrinkItem(new Item.Properties()
-                    .food(new FoodProperties.Builder().alwaysEat().build()), MobEffects.DAMAGE_RESISTANCE, 2, 0,
+                    .food(new FoodProperties.Builder().alwaysEat().build()), MobEffects.DAMAGE_RESISTANCE, 2, 1,
                     0.5, DrinkVariant.BEER, BEER_GLASS_EMPTY.get())
             { @Override public int getMaxStackSize(ItemStack stack) { return stackSizeDrink; } });
 
