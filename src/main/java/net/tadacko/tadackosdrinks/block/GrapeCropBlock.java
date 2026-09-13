@@ -33,7 +33,7 @@ public class GrapeCropBlock extends CropBlock {
     public static final int MAX_AGE = 3;
 
     // natural spread chance: 1 in SPREAD_TIME each eligible tick
-    private static final int SPREAD_TIME = 5;
+    public static final int SPREAD_TIME = 10;
 
     private final Supplier<Item> seedItem;
     private final Supplier<Block> wireCropVariant;
@@ -155,13 +155,15 @@ public class GrapeCropBlock extends CropBlock {
         if (wireUpdated != pState) pLevel.setBlock(pPos, wireUpdated, 2);
 
         int currentAge = this.getAge(pState);
+
+        // side spread independent of upward spread
+        if (currentAge >= 1 && pRandom.nextInt(SPREAD_TIME) == 0) attemptSideSpread(pLevel, pPos);
+
         float growthSpeed = getGrowthSpeed(this, pLevel, pPos);
 
         boolean growthHappens = pRandom.nextInt((int) (120.0F / growthSpeed) + 1) == 0;
         if (!ForgeHooks.onCropsGrowPre(pLevel, pPos, pState, growthHappens)) return;
         if (!growthHappens) return;
-
-        if (currentAge >= 1 && pRandom.nextInt(SPREAD_TIME) == 0) attemptSideSpread(pLevel, pPos);
 
         if (currentAge == getMaxAge()) {
             if (pLevel.getBlockState(pPos.above()).getBlock() instanceof TrellisBlock) {
@@ -169,7 +171,9 @@ public class GrapeCropBlock extends CropBlock {
                 BlockState newState = this.defaultBlockState()
                         .setValue(AGE, 0)
                         .setValue(VARIANT, pState.getValue(VARIANT));
-                pLevel.setBlock(pPos.above(), newState, Block.UPDATE_ALL);
+                // keep wire flags up-to-date
+                BlockState wireUpdatedAbove = updateWireConnections(newState, pLevel, pPos.above());
+                pLevel.setBlock(pPos.above(), wireUpdatedAbove, Block.UPDATE_ALL);
             }
         } else if (currentAge == 0 || pLevel.getBlockState(pPos.above()).getBlock() instanceof TrellisBlock) { // prevent going above age 1 if no trellis
             int nextAge = currentAge + 1;
@@ -178,7 +182,6 @@ public class GrapeCropBlock extends CropBlock {
 
         ForgeHooks.onCropsGrowPost(pLevel, pPos, pState);
     }
-
 
     @Override
     public boolean isValidBonemealTarget(LevelReader pLevel, BlockPos pPos, BlockState pState, boolean pIsClient) {
@@ -214,7 +217,9 @@ public class GrapeCropBlock extends CropBlock {
                 BlockState newState = this.defaultBlockState()
                         .setValue(AGE, 0)
                         .setValue(VARIANT, pState.getValue(VARIANT));
-                pLevel.setBlock(pPos.above(), newState, Block.UPDATE_ALL);
+                // keep wire flags up-to-date
+                BlockState wireUpdatedAbove = updateWireConnections(newState, pLevel, pPos.above());
+                pLevel.setBlock(pPos.above(), wireUpdatedAbove, Block.UPDATE_ALL);
             }
         } else if (currentAge == 0 || pLevel.getBlockState(pPos.above()).getBlock() instanceof TrellisBlock) { // prevent going above age 1 if no trellis
             pLevel.setBlock(pPos, pState.setValue(AGE, nextAge), Block.UPDATE_ALL);

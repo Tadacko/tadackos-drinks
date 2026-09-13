@@ -37,7 +37,6 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
     private static final VoxelShape SHAPE_NORTH_SOUTH = Block.box(4.0D, 4.0D, 0.0D, 12.0D, 12.0D, 16.0D);
     private static final VoxelShape SHAPE_EAST_WEST = Block.box(0.0D, 4.0D, 4.0D, 16.0D, 12.0D, 12.0D);
 
-    private static final int SPREAD_TIME = 5;
     private static final int GRAPE_TIME = 20;
 
     public static final IntegerProperty UNSUPPORTED = IntegerProperty.create("unsupported", 0, 2);
@@ -79,7 +78,7 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
             return;
         }
 
-        if (random.nextInt(SPREAD_TIME) != 0) return;
+        if (random.nextInt(GrapeCropBlock.SPREAD_TIME) != 0) return;
 
         Direction facing = state.getValue(FACING);
         Direction dir1 = facing;
