@@ -28,37 +28,35 @@ import java.util.Map;
  *
  * The ONE thing RenderType does that fights a custom FBO is force-rebind
  * Minecraft.getMainRenderTarget() as part of its own setupRenderState(). So we temporarily swap
- * what that call RETURNS, via reflection on Minecraft's private mainRenderTarget field, so that
+ * what that call RETURNS, via reflection on Minecraft's private render-target field, so that
  * forced rebind lands on our FBO instead of the real window framebuffer. Always restored in a
  * finally block.
  *
- * FRAGILE POINT: relies on a field literally named "mainRenderTarget" on Minecraft (true for
- * Mojang-mapped 1.19.4/Forge). If MAIN_TARGET_FIELD ends up null (logged once), the field was
- * renamed for your setup - enumerate Minecraft.class.getDeclaredFields() to find the RenderTarget
- * one and update FIELD_NAME.
+ * Field is resolved by TYPE (the one RenderTarget-typed field on Minecraft), not by a hardcoded
+ * name - a hardcoded name is a plausible source of dev-vs-packaged-jar discrepancies if the
+ * resolved field ever differs between environments. Every failure path below logs instead of
+ * silently swallowing, so if this ever breaks again the log will say exactly where.
  */
 final class BlockIconCache {
     private BlockIconCache() {}
 
-    private static final String FIELD_NAME = "mainRenderTarget";
     private static final Field MAIN_TARGET_FIELD = resolveField();
 
     private static Field resolveField() {
-        try {
-            Field f = Minecraft.class.getDeclaredField(FIELD_NAME);
-            f.setAccessible(true);
-            return f;
-        } catch (NoSuchFieldException e) {
-            System.err.println("[TadackosDrinks] BlockIconCache: Minecraft." + FIELD_NAME
-                    + " not found - block background icons disabled. Enumerate Minecraft.class fields to find the correct name.");
-            return null;
+        for (Field f : Minecraft.class.getDeclaredFields()) {
+            if (RenderTarget.class.isAssignableFrom(f.getType())) {
+                f.setAccessible(true);
+                return f;
+            }
         }
+        System.err.println("[TadackosDrinks] BlockIconCache: no RenderTarget-typed field found on Minecraft - block background icons disabled.");
+        return null;
     }
 
     private record Key(BlockState state, int size) {}
     private static final Map<Key, RenderTarget> CACHE = new HashMap<>();
 
-    /** Returns a GL texture id for this block's icon, or -1 if unavailable (reflection failed). */
+    /** Returns a GL texture id for this block's icon, or -1 if unavailable (reflection or render failed). */
     static int get(PageContext ctx, BlockState state, int size) {
         if (MAIN_TARGET_FIELD == null) return -1;
         RenderTarget cached = CACHE.computeIfAbsent(new Key(state, size), k -> render(ctx, state, size));
@@ -82,10 +80,10 @@ final class BlockIconCache {
         try {
             realMain = (RenderTarget) MAIN_TARGET_FIELD.get(mc);
         } catch (IllegalAccessException e) {
+            System.err.println("[TadackosDrinks] BlockIconCache: failed to read render target field: " + e);
             return null;
         }
 
-        RenderSystem.backupProjectionMatrix();
         PoseStack modelView = null;
         try {
             MAIN_TARGET_FIELD.set(mc, fbo); // redirect getMainRenderTarget() -> fbo for this draw only
@@ -98,16 +96,13 @@ final class BlockIconCache {
             RenderSystem.setProjectionMatrix(ortho, VertexSorting.ORTHOGRAPHIC_Z);
 
             // GameRenderer leaves its own GUI-frame model-view transform active in RenderSystem's
-            // separate static matrix (independent of any PoseStack we pass around). Our custom ortho
-            // projection was very likely being combined with that leftover transform, pushing our
-            // geometry outside the clip volume entirely - drawn, but never visible. Reset to identity
-            // for the duration of this isolated draw, then restore.
+            // separate static matrix. Reset to identity for the duration of this isolated draw, then restore.
             modelView = RenderSystem.getModelViewStack();
             modelView.pushPose();
             modelView.setIdentity();
             RenderSystem.applyModelViewMatrix();
 
-            RenderSystem.setShaderColor(1f, 1f, 1f, 1f); // defensive: this bakes into the cache once, don't inherit stale alpha
+            RenderSystem.setShaderColor(1f, 1f, 1f, 1f); // defensive: bakes into the cache once, don't inherit stale alpha
 
             // Proven path - identical call used for flowchart sub-icons / BlockScene rendering.
             // Its internal RenderType draws now rebind onto `fbo` (via the field swap above),
@@ -115,14 +110,25 @@ final class BlockIconCache {
             // binding for us - none of that needs to be replicated by hand here.
             GuideBlockScenes.renderBlockModel(new PoseStack(), ctx, state, 0, 0, size, 0, 0, 0);
         } catch (IllegalAccessException e) {
+            System.err.println("[TadackosDrinks] BlockIconCache: failed to swap render target field: " + e);
+            return null;
+        } catch (Throwable t) {
+            // Anything else (GL state, atlas binding, etc.) - log instead of failing silently.
+            // A render exception caught further up the call stack would otherwise make the icon
+            // vanish with zero trace, which is exactly the bug this class previously had.
+            System.err.println("[TadackosDrinks] BlockIconCache: render failed for " + state + ": " + t);
+            t.printStackTrace();
             return null;
         } finally {
             try {
                 MAIN_TARGET_FIELD.set(mc, realMain); // always restore, even if the draw threw
-            } catch (IllegalAccessException ignored) {
+            } catch (IllegalAccessException e) {
+                System.err.println("[TadackosDrinks] BlockIconCache: failed to restore render target field: " + e);
             }
-            modelView.popPose();
-            RenderSystem.applyModelViewMatrix();
+            if (modelView != null) {
+                modelView.popPose();
+                RenderSystem.applyModelViewMatrix();
+            }
             RenderSystem.restoreProjectionMatrix();
             realMain.bindWrite(true); // rebind + restore viewport for normal GUI rendering to continue
         }
