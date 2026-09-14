@@ -200,17 +200,13 @@ public class PotStillBlockEntity extends BlockEntity implements IFluidColorProvi
             .addAll(DISTILLATION_RESULTS.keySet())
             .build();
 
-    public PotStillBlockEntity(BlockPos pPos, BlockState pBlockState) {
-        super(ModBlockEntities.POT_STILL.get(), pPos, pBlockState);
-    }
+    public PotStillBlockEntity(BlockPos pPos, BlockState pBlockState) { super(ModBlockEntities.POT_STILL.get(), pPos, pBlockState); }
 
     private LazyOptional<IFluidHandler> lazyFluidHandler = LazyOptional.empty();
 
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
-        if (cap == ForgeCapabilities.FLUID_HANDLER) {
-            return lazyFluidHandler.cast();
-        }
+        if (cap == ForgeCapabilities.FLUID_HANDLER) return lazyFluidHandler.cast();
         return super.getCapability(cap, side);
     }
 
@@ -244,9 +240,8 @@ public class PotStillBlockEntity extends BlockEntity implements IFluidColorProvi
         if (nbt.contains("clock") && level != null) {
             boolean clockState = nbt.getBoolean("clock");
             BlockState currentState = getBlockState();
-            if (currentState.hasProperty(PotStillBlock.CLOCK) && currentState.getValue(PotStillBlock.CLOCK) != clockState) {
-                level.setBlock(worldPosition, currentState.setValue(PotStillBlock.CLOCK, clockState), 3);
-            }
+            if (currentState.hasProperty(PotStillBlock.CLOCK) && currentState.getValue(PotStillBlock.CLOCK) != clockState)
+                level.setBlock(worldPosition, currentState.setValue(PotStillBlock.CLOCK, clockState), Block.UPDATE_ALL);
         }
         fluidTank.readFromNBT(nbt);
     }
@@ -259,15 +254,11 @@ public class PotStillBlockEntity extends BlockEntity implements IFluidColorProvi
     }
 
     @Override
-    public void handleUpdateTag(CompoundTag tag) {
-        this.load(tag);
-    }
+    public void handleUpdateTag(CompoundTag tag) { this.load(tag); }
 
     @Nullable
     @Override
-    public ClientboundBlockEntityDataPacket getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    public ClientboundBlockEntityDataPacket getUpdatePacket() { return ClientboundBlockEntityDataPacket.create(this); }
 
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt) {
@@ -276,9 +267,7 @@ public class PotStillBlockEntity extends BlockEntity implements IFluidColorProvi
             this.load(tag);
 
             // Force re-render on client
-            if (level != null && level.isClientSide) {
-                level.sendBlockUpdated(this.getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
-            }
+            if (level != null && level.isClientSide) level.sendBlockUpdated(this.getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
     }
 
@@ -296,40 +285,40 @@ public class PotStillBlockEntity extends BlockEntity implements IFluidColorProvi
         entity.cauldronPresent = cauldronPos != null && level.getBlockState(cauldronPos).is(Blocks.CAULDRON);
 
         if (entity.isProcessing) {
-            // Stop if the condenser or the cauldron below it disappeared
-            if (entity.condenserDir == null || !entity.cauldronPresent || !isValidHeatSource(level, pos.below())) {
+            // Stop if the condenser or heat source disappeared
+            if (entity.condenserDir == null || !isValidHeatSource(level, pos.below())) {
                 entity.isProcessing = false;
-                level.sendBlockUpdated(pos, state, state, 3);
+                level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                 entity.setChanged();
                 return;
             }
 
-            entity.progress++;
+            if (entity.progress < MAX_PROGRESS) {
+                entity.progress++;
 
-            if (entity.progress % 20 == 0 && entity.getBlockState().getValue(PotStillBlock.CLOCK)) {
-                entity.setChanged(); // mark dirty (avoid sending full block update every tick)
-                // Force sync to client every second for clock hand rendering
-                level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
-            }
-
-            if (entity.progress >= MAX_PROGRESS) {
+                if (entity.progress % 20 == 0 && entity.getBlockState().getValue(PotStillBlock.CLOCK)) {
+                    entity.setChanged(); // mark dirty (avoid sending full block update every tick)
+                    // Force sync to client every second for clock hand rendering
+                    level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
+                }
+            } else if (entity.cauldronPresent) { // only check for cauldron here to allow progress without it
                 BlockState resultBlockState = DISTILLATION_RESULTS.get(currentFluid);
 
                 if (resultBlockState != null) {
-                    level.setBlock(cauldronPos, resultBlockState, 3);
+                    level.setBlock(cauldronPos, resultBlockState, Block.UPDATE_ALL);
                     entity.fluidTank.drain(3000, IFluidHandler.FluidAction.EXECUTE);
                 }
 
-                entity.isProcessing  = false;
+                entity.isProcessing = false;
                 entity.progress = 0;
-                level.sendBlockUpdated(pos, state, state, 3);
+                level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                 entity.setChanged();
             }
-        } else if (entity.condenserDir != null && entity.cauldronPresent && isValidHeatSource(level, pos.below())) {
+        } else if (entity.condenserDir != null && isValidHeatSource(level, pos.below())) {
             if ((fluidStack.getAmount() >= 3000 && BASE_FLUIDS.contains(currentFluid)) ||
                     (fluidStack.getAmount() >= 2000 && SPIRIT_FLUIDS.contains(currentFluid))) {
                 entity.isProcessing = true;
-                level.sendBlockUpdated(pos, state, state, 3);
+                level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                 entity.setChanged();
             }
         }
@@ -349,9 +338,7 @@ public class PotStillBlockEntity extends BlockEntity implements IFluidColorProvi
                 SoundEvent sound = wasDrained ? SoundEvents.BUCKET_FILL : SoundEvents.BUCKET_EMPTY;
                 level.playSound(null, pos, sound, SoundSource.BLOCKS, 1.0F, 1.0F);
 
-                if (wasDrained) {
-                    this.progress = 0;
-                }
+                if (wasDrained) this.progress = 0;
 
                 level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                 setChanged(level, pos, state);
@@ -405,9 +392,7 @@ public class PotStillBlockEntity extends BlockEntity implements IFluidColorProvi
 
         if (block == Blocks.MAGMA_BLOCK || block == Blocks.FIRE || block == Blocks.SOUL_FIRE) return true;
 
-        if (block == Blocks.CAMPFIRE || block == Blocks.SOUL_CAMPFIRE) {
-            return state.hasProperty(CampfireBlock.LIT) && state.getValue(CampfireBlock.LIT);
-        }
+        if (block == Blocks.CAMPFIRE || block == Blocks.SOUL_CAMPFIRE) return state.hasProperty(CampfireBlock.LIT) && state.getValue(CampfireBlock.LIT);
 
         if (state.getFluidState().is(net.minecraft.tags.FluidTags.LAVA)) return true;
 

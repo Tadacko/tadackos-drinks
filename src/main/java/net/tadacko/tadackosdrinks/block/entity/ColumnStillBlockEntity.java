@@ -453,17 +453,13 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
         }
     };
 
-    public ColumnStillBlockEntity(BlockPos pPos, BlockState pBlockState) {
-        super(ModBlockEntities.COLUMN_STILL.get(), pPos, pBlockState);
-    }
+    public ColumnStillBlockEntity(BlockPos pPos, BlockState pBlockState) { super(ModBlockEntities.COLUMN_STILL.get(), pPos, pBlockState); }
 
     private LazyOptional<IFluidHandler> lazyFluidHandler = LazyOptional.empty();
 
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
-        if (cap == ForgeCapabilities.FLUID_HANDLER) {
-            return lazyFluidHandler.cast();
-        }
+        if (cap == ForgeCapabilities.FLUID_HANDLER) return lazyFluidHandler.cast();
         return super.getCapability(cap, side);
     }
 
@@ -496,9 +492,8 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
         if (nbt.contains("clock") && level != null) {
             boolean clockState = nbt.getBoolean("clock");
             BlockState currentState = getBlockState();
-            if (currentState.hasProperty(ColumnStillBlock.CLOCK) && currentState.getValue(ColumnStillBlock.CLOCK) != clockState) {
-                level.setBlock(worldPosition, currentState.setValue(ColumnStillBlock.CLOCK, clockState), 3);
-            }
+            if (currentState.hasProperty(ColumnStillBlock.CLOCK) && currentState.getValue(ColumnStillBlock.CLOCK) != clockState)
+                level.setBlock(worldPosition, currentState.setValue(ColumnStillBlock.CLOCK, clockState), Block.UPDATE_ALL);
         }
         fluidTank.readFromNBT(nbt);
     }
@@ -511,24 +506,18 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
     }
 
     @Override
-    public void handleUpdateTag(CompoundTag tag) {
-        this.load(tag);
-    }
+    public void handleUpdateTag(CompoundTag tag) { this.load(tag); }
 
     @Nullable
     @Override
-    public ClientboundBlockEntityDataPacket getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    public ClientboundBlockEntityDataPacket getUpdatePacket() { return ClientboundBlockEntityDataPacket.create(this); }
 
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt) {
         CompoundTag tag = pkt.getTag();
         if (tag != null) {
             this.load(tag);
-            if (level != null && level.isClientSide) {
-                level.sendBlockUpdated(this.getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
-            }
+            if (level != null && level.isClientSide) level.sendBlockUpdated(this.getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
     }
 
@@ -569,38 +558,37 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
         boolean heated = PotStillBlockEntity.isValidHeatSource(level, pos.below());
 
         if (entity.isProcessing) {
-            if (family == null || required <= 0 || tier == null || entity.activeCondenser == null || !entity.cauldronPresent || !heated) {
+            if (family == null || required <= 0 || tier == null || entity.activeCondenser == null || !heated) {
                 entity.isProcessing = false;
-                level.sendBlockUpdated(pos, state, state, 3);
+                level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                 entity.setChanged();
                 return;
             }
 
-            entity.progress++;
-
-            if (entity.progress % 20 == 0 && state.getValue(ColumnStillBlock.CLOCK)) {
-                entity.setChanged();
-                level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
-            }
-
             int maxProgress = maxProgressFor(height);
-            if (entity.progress >= maxProgress) {
+            if (entity.progress < maxProgress) {
+                entity.progress++;
+
+                if (entity.progress % 20 == 0 && state.getValue(ColumnStillBlock.CLOCK)) {
+                    entity.setChanged();
+                    level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
+                }
+            } else if (entity.cauldronPresent) {
                 BlockState resultState = tierResult(family, tier);
 
                 if (resultState != null) {
-                    level.setBlock(entity.activeCondenser.cauldronPos(), resultState, 3);
+                    level.setBlock(entity.activeCondenser.cauldronPos(), resultState, Block.UPDATE_ALL);
                     entity.fluidTank.drain(required, IFluidHandler.FluidAction.EXECUTE);
                 }
 
                 entity.isProcessing = false;
                 entity.progress = 0;
-                level.sendBlockUpdated(pos, state, state, 3);
+                level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                 entity.setChanged();
             }
-        } else if (family != null && required > 0 && entity.activeCondenser != null && entity.cauldronPresent && heated
-                && fluidStack.getAmount() >= required) {
+        } else if (family != null && required > 0 && entity.activeCondenser != null && heated && fluidStack.getAmount() >= required) {
             entity.isProcessing = true;
-            level.sendBlockUpdated(pos, state, state, 3);
+            level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
             entity.setChanged();
         }
     }
@@ -618,9 +606,7 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
                 SoundEvent sound = wasDrained ? SoundEvents.BUCKET_FILL : SoundEvents.BUCKET_EMPTY;
                 level.playSound(null, pos, sound, SoundSource.BLOCKS, 1.0F, 1.0F);
 
-                if (wasDrained) {
-                    this.progress = 0;
-                }
+                if (wasDrained) this.progress = 0;
 
                 level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
                 setChanged(level, pos, state);
