@@ -95,31 +95,21 @@ public class HangoverLightRenderer {
         float sunIntensity = 0f;
 
         if (mc.level.dimensionType().hasSkyLight() && mc.level.isDay() && !mc.level.isThundering()) {
-            // first: ensure player's view to sky is unobstructed
-            Vec3 skyEnd = eye.add(look.scale(SKY_CHECK_RANGE));
-            ClipContext skyCtx = new ClipContext(eye, skyEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player);
-            HitResult skyHit = mc.level.clip(skyCtx);
-            boolean skyVisible = skyHit.getType() == HitResult.Type.MISS;
+            // cheap check first: is the player even looking toward the sun's actual position?
+            float sunAngle = mc.level.getSunAngle(1.0F);
+            Vec3 sunDir = new Vec3(-Mth.sin(sunAngle), Mth.cos(sunAngle), 0.0D);
+            double dot = look.dot(sunDir);
 
-            if (skyVisible) {
-                // get vanilla sun angle and shift it like vanilla rendering often does
-                float sunAngle = mc.level.getSunAngle(1.0F);
-                float shifted = sunAngle + (float) Math.PI / 2.0F;
+            if (dot > SUN_DOT_THRESHOLD) {
+                // only now pay for the expensive long-range unobstructed-sky raycast
+                Vec3 skyEnd = eye.add(look.scale(SKY_CHECK_RANGE));
+                ClipContext skyCtx = new ClipContext(eye, skyEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player);
+                HitResult skyHit = mc.level.clip(skyCtx);
+                boolean skyVisible = skyHit.getType() == HitResult.Type.MISS;
 
-                // generate several plausible sun direction vectors (different axis conventions)
-                Vec3 candidateA = new Vec3(Math.cos(shifted), Math.sin(shifted), 0.0).normalize(); // X,Y plane
-                Vec3 candidateB = new Vec3(0.0, Math.sin(shifted), -Math.cos(shifted)).normalize(); // Y,Z plane (east/west on Z)
-                Vec3 candidateC = new Vec3(Math.cos(shifted), 0.0, -Math.sin(shifted)).normalize(); // X,Z variant
-
-                double dotA = look.dot(candidateA);
-                double dotB = look.dot(candidateB);
-                double dotC = look.dot(candidateC);
-
-                double bestDot = Math.max(Math.max(dotA, dotB), dotC);
-
-                if (bestDot > SUN_DOT_THRESHOLD) {
+                if (skyVisible) {
                     float ampScale = 0.8f + amp * 0.1f;
-                    float closeness = (float) ((bestDot - SUN_DOT_THRESHOLD) / (1.0 - SUN_DOT_THRESHOLD));
+                    float closeness = (float) ((dot - SUN_DOT_THRESHOLD) / (1.0 - SUN_DOT_THRESHOLD));
                     closeness = Mth.clamp(closeness, 0f, 1f);
                     sunIntensity = closeness * ampScale;
                     sunIntensity = Mth.clamp(sunIntensity, 0f, 1f);
