@@ -13,6 +13,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeMap;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.tadacko.tadackosdrinks.TadackosDrinks;
+import net.tadacko.tadackosdrinks.util.BacUtils;
 
 import java.util.Map;
 import java.util.UUID;
@@ -33,6 +34,7 @@ public class InebriationEffect extends MobEffect {
     private static final String SESSION_TAG = "inebriation_session";
     private static final String KEY_MAX_AMP = "max_amp";
     private static final String KEY_HANGOVER_PENDING = "hangover_pending";
+    private static final String KEY_BAC_PERCENT = "bac_percent";
 
     private static final String KEY_LUCK = "applied_luck";
     private static final String KEY_UNLUCK = "applied_unluck";
@@ -171,6 +173,7 @@ public class InebriationEffect extends MobEffect {
 
                 // clear session entirely
                 persistent.remove(SESSION_TAG);
+                persistent.remove(KEY_BAC_PERCENT);
                 root.put(TadackosDrinks.MOD_ID, persistent);
             });
         }
@@ -238,27 +241,36 @@ public class InebriationEffect extends MobEffect {
 
             entity.setDeltaMovement(newVel);
 
-            if (entity instanceof ServerPlayer serverPlayer) {
-                serverPlayer.connection.send(new ClientboundSetEntityMotionPacket(entity.getId(), newVel));
-            }
+            if (entity instanceof ServerPlayer serverPlayer) serverPlayer.connection.send(new ClientboundSetEntityMotionPacket(entity.getId(), newVel));
         }
 
-        // check if time is about to expire
+        // downgrade/apply hangover
+        CompoundTag root = entity.getPersistentData();
+        CompoundTag persistent = root.getCompound(TadackosDrinks.MOD_ID);
+
+        if (!persistent.contains(KEY_BAC_PERCENT)) return;
+
+        double currentBacPercent = persistent.getDouble(KEY_BAC_PERCENT);
+        double ratePerTick = BacUtils.BACEliminationRatePercentPerHour / 72000.0; // 72000 ticks is 1h
+        currentBacPercent = Math.max(0.0, currentBacPercent - ratePerTick);
+
         MobEffectInstance inst = entity.getEffect(this);
         if (inst != null && inst.getDuration() <= 1) {
-            CompoundTag root = entity.getPersistentData();
-            CompoundTag persistent = root.getCompound(TadackosDrinks.MOD_ID);
             CompoundTag session = persistent.contains(SESSION_TAG) ? persistent.getCompound(SESSION_TAG) : new CompoundTag();
             int recordedMax = session.getInt(KEY_MAX_AMP);
             if (amplifier > 0) {
-                // downgrade
-                entity.addEffect(new MobEffectInstance(this, 120, amplifier - 1, false, true, true));
+                long segmentTicks = BacUtils.computeSegmentTicksForAmp(currentBacPercent, amplifier - 1);
+                int applyDuration = segmentTicks > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) segmentTicks;
+                entity.addEffect(new MobEffectInstance(this, applyDuration, amplifier - 1, false, true, true));
             } else if (amplifier == 0 && recordedMax >= 2) {
                 session.putBoolean(KEY_HANGOVER_PENDING, true);
                 persistent.put(SESSION_TAG, session);
                 root.put(TadackosDrinks.MOD_ID, persistent);
             }
         }
+
+        persistent.putDouble(KEY_BAC_PERCENT, currentBacPercent);
+        root.put(TadackosDrinks.MOD_ID, persistent);
     }
 
 
@@ -267,9 +279,7 @@ public class InebriationEffect extends MobEffect {
         MobEffectInstance existing = entity.getEffect(effectType);
         boolean needsApply = existing == null || existing.getAmplifier() != amp;
 
-        if (needsApply) {
-            entity.addEffect(new MobEffectInstance(effectType, duration, amp, false, false, false));
-        }
+        if (needsApply) entity.addEffect(new MobEffectInstance(effectType, duration, amp, false, false, false));
 
         CompoundTag root = entity.getPersistentData();
         CompoundTag persistent = root.getCompound(TadackosDrinks.MOD_ID);
