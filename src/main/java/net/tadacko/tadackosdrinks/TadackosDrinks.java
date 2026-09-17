@@ -172,6 +172,7 @@ public class TadackosDrinks
             ComposterBlock.COMPOSTABLES.put(ModItems.AGAVE_PINA_BAKED.get(), 0.5f);
             ComposterBlock.COMPOSTABLES.put(ModItems.AGAVE_PINA_CRUSHED.get(), 0.3f);
             ComposterBlock.COMPOSTABLES.put(ModItems.YEAST.get(), 0.65f);
+            ComposterBlock.COMPOSTABLES.put(ModBlocks.BARLEY_BLOCK.get().asItem(), 0.85f);
         });
     }
 
@@ -264,10 +265,20 @@ public class TadackosDrinks
             event.accept(ModItems.TEQUILA_AGED_GLASS);
 
             // Every fluid's bucket, in the order it was registered in ModFluids.ALL_FLUIDS.
-            for (ModFluids.FluidEntry entry : ModFluids.ALL_FLUIDS) {
-                event.accept(entry.bucket());
-            }
+            for (ModFluids.FluidEntry entry : ModFluids.ALL_FLUIDS) event.accept(entry.bucket());
 
+            event.accept(ModBlocks.BARLEY_BLOCK);
+            event.accept(ModBlocks.TRELLIS_OAK);
+            event.accept(ModBlocks.TRELLIS_SPRUCE);
+            event.accept(ModBlocks.TRELLIS_BIRCH);
+            event.accept(ModBlocks.TRELLIS_JUNGLE);
+            event.accept(ModBlocks.TRELLIS_ACACIA);
+            event.accept(ModBlocks.TRELLIS_DARK_OAK);
+            event.accept(ModBlocks.TRELLIS_MANGROVE);
+            event.accept(ModBlocks.TRELLIS_CHERRY);
+            event.accept(ModBlocks.TRELLIS_BAMBOO);
+            event.accept(ModBlocks.TRELLIS_CRIMSON);
+            event.accept(ModBlocks.TRELLIS_WARPED);
             event.accept(ModBlocks.MANUAL_CRUSHER_OAK);
             event.accept(ModBlocks.MANUAL_CRUSHER_SPRUCE);
             event.accept(ModBlocks.MANUAL_CRUSHER_BIRCH);
@@ -305,17 +316,6 @@ public class TadackosDrinks
             event.accept(ModBlocks.POT_STILL);
             event.accept(ModBlocks.COLUMN_STILL);
             event.accept(ModBlocks.CONDENSER);
-            event.accept(ModBlocks.TRELLIS_OAK);
-            event.accept(ModBlocks.TRELLIS_SPRUCE);
-            event.accept(ModBlocks.TRELLIS_BIRCH);
-            event.accept(ModBlocks.TRELLIS_JUNGLE);
-            event.accept(ModBlocks.TRELLIS_ACACIA);
-            event.accept(ModBlocks.TRELLIS_DARK_OAK);
-            event.accept(ModBlocks.TRELLIS_MANGROVE);
-            event.accept(ModBlocks.TRELLIS_CHERRY);
-            event.accept(ModBlocks.TRELLIS_BAMBOO);
-            event.accept(ModBlocks.TRELLIS_CRIMSON);
-            event.accept(ModBlocks.TRELLIS_WARPED);
         }
     }
 

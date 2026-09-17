@@ -4,6 +4,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.HayBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -16,15 +17,45 @@ import net.tadacko.tadackosdrinks.item.ModItems;
 import java.util.function.Supplier;
 
 public class ModBlocks {
-    public static final DeferredRegister<Block> BLOCKS =
-            DeferredRegister.create(ForgeRegistries.BLOCKS, TadackosDrinks.MOD_ID);
+    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, TadackosDrinks.MOD_ID);
 
     // .forceSolidOn() to stop fluids from breaking blocks
+    public static final RegistryObject<Block> KEG_BLOCK = BLOCKS.register("keg",
+            () -> new KegBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).strength(1.0F).sound(SoundType.METAL).noOcclusion().forceSolidOn()));
+
     public static final RegistryObject<Block> PLACEABLE_DRINKWARE_BLOCK = BLOCKS.register("placeable_drinkware_block",
             () -> new PlaceableDrinkwareBlock(BlockBehaviour.Properties.copy(Blocks.GLASS).strength(0.2f).sound(SoundType.METAL).noOcclusion().forceSolidOn()));
 
-    public static final RegistryObject<Block> KEG_BLOCK = BLOCKS.register("keg",
-            () -> new KegBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).strength(1.0F).sound(SoundType.METAL).noOcclusion().forceSolidOn()));
+    public static final RegistryObject<Block> BARLEY_BLOCK = registerBlock("barley_block",
+            () -> new HayBlock(BlockBehaviour.Properties.copy(Blocks.HAY_BLOCK)));
+    public static final RegistryObject<Block> TRELLIS_OAK = registerBlock("trellis_oak",
+            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
+    public static final RegistryObject<Block> TRELLIS_SPRUCE = registerBlock("trellis_spruce",
+            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
+    public static final RegistryObject<Block> TRELLIS_BIRCH = registerBlock("trellis_birch",
+            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
+    public static final RegistryObject<Block> TRELLIS_JUNGLE = registerBlock("trellis_jungle",
+            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
+    public static final RegistryObject<Block> TRELLIS_ACACIA = registerBlock("trellis_acacia",
+            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
+    public static final RegistryObject<Block> TRELLIS_DARK_OAK = registerBlock("trellis_dark_oak",
+            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
+    public static final RegistryObject<Block> TRELLIS_MANGROVE = registerBlock("trellis_mangrove",
+            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
+    public static final RegistryObject<Block> TRELLIS_CHERRY = registerBlock("trellis_cherry",
+            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
+    public static final RegistryObject<Block> TRELLIS_BAMBOO = registerBlock("trellis_bamboo",
+            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
+    public static final RegistryObject<Block> TRELLIS_CRIMSON = registerBlock("trellis_crimson",
+            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.NETHER_WOOD).noOcclusion().forceSolidOff()));
+    public static final RegistryObject<Block> TRELLIS_WARPED = registerBlock("trellis_warped",
+            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.NETHER_WOOD).noOcclusion().forceSolidOff()));
+    public static final RegistryObject<Block> ROPE = BLOCKS.register("rope",
+            () -> new RopeBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(0.25f).sound(SoundType.WOOL).noOcclusion()
+                    .noCollission()));
+    public static final RegistryObject<Block> TRELLIS_WIRE = BLOCKS.register("trellis_wire",
+            () -> new TrellisWireBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(0.5f).sound(SoundType.METAL).noOcclusion()
+                    .noCollission()));
 
     public static final RegistryObject<Block> MANUAL_CRUSHER_OAK = registerBlock("manual_crusher_oak",
             () -> new ManualCrusherBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).strength(2f).sound(SoundType.METAL).noOcclusion().forceSolidOn()));
@@ -104,35 +135,6 @@ public class ModBlocks {
     public static final RegistryObject<Block> CONDENSER = registerBlock("condenser",
             () -> new CondenserBlock(BlockBehaviour.Properties.copy(Blocks.COPPER_BLOCK).strength(2f).sound(SoundType.COPPER).requiresCorrectToolForDrops()
                     .noOcclusion().forceSolidOn()));
-
-    public static final RegistryObject<Block> ROPE = BLOCKS.register("rope",
-            () -> new RopeBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(0.25f).sound(SoundType.WOOL).noOcclusion()
-                    .noCollission()));
-    public static final RegistryObject<Block> TRELLIS_OAK = registerBlock("trellis_oak",
-            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
-    public static final RegistryObject<Block> TRELLIS_SPRUCE = registerBlock("trellis_spruce",
-            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
-    public static final RegistryObject<Block> TRELLIS_BIRCH = registerBlock("trellis_birch",
-            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
-    public static final RegistryObject<Block> TRELLIS_JUNGLE = registerBlock("trellis_jungle",
-            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
-    public static final RegistryObject<Block> TRELLIS_ACACIA = registerBlock("trellis_acacia",
-            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
-    public static final RegistryObject<Block> TRELLIS_DARK_OAK = registerBlock("trellis_dark_oak",
-            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
-    public static final RegistryObject<Block> TRELLIS_MANGROVE = registerBlock("trellis_mangrove",
-            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
-    public static final RegistryObject<Block> TRELLIS_CHERRY = registerBlock("trellis_cherry",
-            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
-    public static final RegistryObject<Block> TRELLIS_BAMBOO = registerBlock("trellis_bamboo",
-            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.WOOD).noOcclusion().forceSolidOff()));
-    public static final RegistryObject<Block> TRELLIS_CRIMSON = registerBlock("trellis_crimson",
-            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.NETHER_WOOD).noOcclusion().forceSolidOff()));
-    public static final RegistryObject<Block> TRELLIS_WARPED = registerBlock("trellis_warped",
-            () -> new TrellisBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(1f).sound(SoundType.NETHER_WOOD).noOcclusion().forceSolidOff()));
-    public static final RegistryObject<Block> TRELLIS_WIRE = BLOCKS.register("trellis_wire",
-            () -> new TrellisWireBlock(BlockBehaviour.Properties.copy(Blocks.WHITE_CARPET).strength(0.5f).sound(SoundType.METAL).noOcclusion()
-                    .noCollission()));
 
     public static final RegistryObject<Block> BARLEY_CROP = BLOCKS.register("barley_crop",
             () -> new BarleyCropBlock(BlockBehaviour.Properties.copy(Blocks.WHEAT)));
