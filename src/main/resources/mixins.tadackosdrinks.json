@@ -7,8 +7,6 @@
     "defaultRequire": 1
   },
   "mixins": [
-    "EnchantmentHelperMixin",
-    "EnchantmentMenuMixin",
-    "FoodDataMixin"
+    "EnchantmentHelperMixin"
   ]
 }

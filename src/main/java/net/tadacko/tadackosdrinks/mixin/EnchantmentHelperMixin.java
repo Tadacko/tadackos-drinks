@@ -6,8 +6,8 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.tadacko.tadackosdrinks.effect.EruditionEffect;
 import net.tadacko.tadackosdrinks.effect.ModEffects;
-import net.tadacko.tadackosdrinks.util.EnchantingPlayerTracker;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -25,7 +25,7 @@ public class EnchantmentHelperMixin {
             cancellable = true
     )
     private static void addTreasureEnchantments(int level, ItemStack stack, boolean treasureAllowed, CallbackInfoReturnable<List<EnchantmentInstance>> cir) {
-        Player player = EnchantingPlayerTracker.getCurrentEnchantingPlayer();
+        Player player = EruditionEffect.EruditionEventHandler.getCurrentEnchantingPlayer();
 
         if (player == null) return;
         if (!player.hasEffect(ModEffects.ERUDITION.get())) return;
@@ -41,9 +41,7 @@ public class EnchantmentHelperMixin {
                 newList.add(new EnchantmentInstance(Enchantments.FROST_WALKER, enchLevel));
             }
 
-            if (Enchantments.MENDING.canEnchant(stack)) {
-                newList.add(new EnchantmentInstance(Enchantments.MENDING, 1));
-            }
+            if (Enchantments.MENDING.canEnchant(stack)) newList.add(new EnchantmentInstance(Enchantments.MENDING, 1));
         }
 
         if (effectAmplifier >= 1) {
@@ -58,9 +56,7 @@ public class EnchantmentHelperMixin {
             }
         }
 
-        if (newList.size() > originalList.size()) {
-            cir.setReturnValue(newList);
-        }
+        if (newList.size() > originalList.size()) cir.setReturnValue(newList);
     }
 
     /**
@@ -75,13 +71,9 @@ public class EnchantmentHelperMixin {
         // The 'power' parameter here seems to be lower than expected, so we adjust thresholds
         if (enchantment == Enchantments.SWIFT_SNEAK) {
             // Adjusted thresholds based on observed power values (7-35 range)
-            if (power >= 30) {
-                return 3;  // Top enchanting slot
-            } else if (power >= 20) {
-                return 2;  // Middle slot
-            } else {
-                return 1;  // Bottom slot
-            }
+            if (power >= 30) return 3;  // Top enchanting slot
+            else if (power >= 20) return 2;  // Middle slot
+            else return 1;  // Bottom slot
         }
 
         // Check what level is appropriate for this power level

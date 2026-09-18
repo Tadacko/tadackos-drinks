@@ -74,6 +74,7 @@ public class ModCommonConfigs {
     public static final ForgeConfigSpec.IntValue HANGOVER_BASE_DURATION;
     public static final ForgeConfigSpec.DoubleValue VULNERABILITY_MULTIPLIER;
     public static final ForgeConfigSpec.DoubleValue WISDOM_MULTIPLIER;
+    public static final ForgeConfigSpec.DoubleValue IMPROVED_DIGESTION_MULTIPLIER;
     public static final ForgeConfigSpec.DoubleValue PIRACY_0_NOTHING_CHANCE;
     public static final ForgeConfigSpec.DoubleValue PIRACY_0_GOLD_CHANCE;
     public static final ForgeConfigSpec.DoubleValue PIRACY_0_EMERALD_CHANCE;
@@ -178,6 +179,8 @@ public class ModCommonConfigs {
                 .defineInRange("vulnerabilityMultiplier", 0.2, -Double.MAX_VALUE, Double.MAX_VALUE); // negative allowed, reverses effect
         WISDOM_MULTIPLIER = BUILDER.comment("How much the Wisdom effect multiplies XP by per level (default 1.5)")
                 .defineInRange("wisdomMultiplier", 1.5, -Double.MAX_VALUE, Double.MAX_VALUE); // negative allowed, reverses effect
+        IMPROVED_DIGESTION_MULTIPLIER = BUILDER.comment("How much the Improved Digestion effect multiplies exhaustion (hunger drain) by per level (default 0.5)")
+                .defineInRange("improvedDigestionMultiplier", 0.5, -Double.MAX_VALUE, Double.MAX_VALUE); // negative allowed, reverses effect
         BUILDER.comment("What chance in percent the Piracy effect has for first 3 drop options, should add up to less than 100, the rest is chance for " +
                 "Diamond").define("piracyReadMe", "");
         PIRACY_0_NOTHING_CHANCE = BUILDER.comment("Chance for nothing (default 50)")
@@ -271,6 +274,7 @@ public class ModCommonConfigs {
             InebriationEffect.hangoverBaseDuration = HANGOVER_BASE_DURATION.get();
             VulnerabilityEffect.VulnerabilityEventHandler.vulnerabilityMultiplier = VULNERABILITY_MULTIPLIER.get().floatValue();
             WisdomEffect.WisdomEventHandler.wisdomMultiplier = WISDOM_MULTIPLIER.get().floatValue();
+            ImprovedDigestionEffect.ImprovedDigestionEventHandler.improvedDigestionMultiplier = IMPROVED_DIGESTION_MULTIPLIER.get().floatValue();
             PiracyEffect.PiracyEventHandler.piracy0NothingChance = PIRACY_0_NOTHING_CHANCE.get().floatValue();
             PiracyEffect.PiracyEventHandler.piracy0GoldChance = PIRACY_0_GOLD_CHANCE.get().floatValue();
             PiracyEffect.PiracyEventHandler.piracy0EmeraldChance = PIRACY_0_EMERALD_CHANCE.get().floatValue();
