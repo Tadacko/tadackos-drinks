@@ -14,15 +14,15 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ImprovedDigestionEffect extends MobEffect {
-    protected ImprovedDigestionEffect(MobEffectCategory pCategory, int pColor) {
-        super(pCategory, pColor);
-    }
+    protected ImprovedDigestionEffect(MobEffectCategory pCategory, int pColor) { super(pCategory, pColor); }
 
     @Mod.EventBusSubscriber(modid = TadackosDrinks.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
     public static class ImprovedDigestionEventHandler {
         private static final Map<UUID, Float> lastExhaustion = new ConcurrentHashMap<>();
 
-        public static float improvedDigestionMultiplier = 0.5f; // fallback default, overridden by config value
+        // fallback defaults, overridden by config values
+        public static float improvedDigestionMultiplier = 0.5f;
+        public static boolean improvedDigestionAllowSprint = true; // can't be in mixin class so it's here
 
         @SubscribeEvent
         public static void onPlayerTick(TickEvent.PlayerTickEvent event) {

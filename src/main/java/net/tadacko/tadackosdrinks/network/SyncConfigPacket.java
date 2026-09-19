@@ -3,7 +3,9 @@ package net.tadacko.tadackosdrinks.network;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 import net.tadacko.tadackosdrinks.effect.CharismaEffect;
+import net.tadacko.tadackosdrinks.effect.ImprovedDigestionEffect;
 import net.tadacko.tadackosdrinks.item.ModItems;
+import net.tadacko.tadackosdrinks.mixin.LocalPlayerMixin;
 import net.tadacko.tadackosdrinks.util.Tooltips;
 
 import java.util.function.Supplier;
@@ -28,10 +30,12 @@ public class SyncConfigPacket {
     private final int stackSizeKeg;
     private final int stackSizeGlass;
     private final int stackSizeDrink;
+    private final boolean improvedDigestionAllowSprint;
 
     public SyncConfigPacket(double ABVBeer, double ABVWine, double ABVCider, double ABVMead, double ABVSpiritLow, double ABVSpiritMid,
                             double ABVSpiritHigh, double ABVSpiritMax, double ABVWhisky, double ABVBrandy, double ABVRum, double ABVVodka, double ABVGin,
-                            double ABVTequila, float charismaMultiplier, int stackSizeMolasses, int stackSizeKeg, int stackSizeGlass, int stackSizeDrink) {
+                            double ABVTequila, float charismaMultiplier, int stackSizeMolasses, int stackSizeKeg, int stackSizeGlass, int stackSizeDrink,
+                            boolean improvedDigestionAllowSprint) {
         this.ABVBeer = ABVBeer;
         this.ABVWine = ABVWine;
         this.ABVCider = ABVCider;
@@ -51,6 +55,7 @@ public class SyncConfigPacket {
         this.stackSizeKeg = stackSizeKeg;
         this.stackSizeGlass = stackSizeGlass;
         this.stackSizeDrink = stackSizeDrink;
+        this.improvedDigestionAllowSprint = improvedDigestionAllowSprint;
     }
 
     public static void encode(SyncConfigPacket pkt, FriendlyByteBuf buf) {
@@ -73,12 +78,13 @@ public class SyncConfigPacket {
         buf.writeInt(pkt.stackSizeKeg);
         buf.writeInt(pkt.stackSizeGlass);
         buf.writeInt(pkt.stackSizeDrink);
+        buf.writeBoolean(pkt.improvedDigestionAllowSprint);
     }
 
     public static SyncConfigPacket decode(FriendlyByteBuf buf) {
         return new SyncConfigPacket(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(),
                 buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(),
-                buf.readFloat(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt());
+                buf.readFloat(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readBoolean());
     }
 
     public static void handle(final SyncConfigPacket packet, Supplier<NetworkEvent.Context> ctxSupplier) {
@@ -89,6 +95,7 @@ public class SyncConfigPacket {
                 Tooltips.setABVValues(packet.ABVBeer, packet.ABVWine, packet.ABVCider, packet.ABVMead, packet.ABVSpiritLow, packet.ABVSpiritMid,
                         packet.ABVSpiritHigh, packet.ABVSpiritMax, packet.ABVWhisky, packet.ABVBrandy, packet.ABVRum, packet.ABVVodka, packet.ABVGin,
                         packet.ABVTequila);
+                ImprovedDigestionEffect.ImprovedDigestionEventHandler.improvedDigestionAllowSprint = packet.improvedDigestionAllowSprint;
             }
             CharismaEffect.CharismaEventHandler.charismaMultiplier = packet.charismaMultiplier;
             ModItems.stackSizeMolasses = packet.stackSizeMolasses;
