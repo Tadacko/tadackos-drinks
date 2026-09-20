@@ -74,6 +74,10 @@ public class ModCommonConfigs {
     public static final ForgeConfigSpec.IntValue HANGOVER_BASE_DURATION;
     public static final ForgeConfigSpec.DoubleValue VULNERABILITY_MULTIPLIER;
     public static final ForgeConfigSpec.DoubleValue WISDOM_MULTIPLIER;
+    public static final ForgeConfigSpec.IntValue ERUDITION_FROST_WALKER_MIN_AMP;
+    public static final ForgeConfigSpec.IntValue ERUDITION_MENDING_MIN_AMP;
+    public static final ForgeConfigSpec.IntValue ERUDITION_SOUL_SPEED_MIN_AMP;
+    public static final ForgeConfigSpec.IntValue ERUDITION_SWIFT_SNEAK_MIN_AMP;
     public static final ForgeConfigSpec.DoubleValue IMPROVED_DIGESTION_MULTIPLIER;
     public static final ForgeConfigSpec.BooleanValue IMPROVED_DIGESTION_ALLOW_SPRINT;
     public static final ForgeConfigSpec.DoubleValue PIRACY_0_NOTHING_CHANCE;
@@ -180,6 +184,16 @@ public class ModCommonConfigs {
                 .defineInRange("vulnerabilityMultiplier", 0.2, -Double.MAX_VALUE, Double.MAX_VALUE); // negative allowed, reverses effect
         WISDOM_MULTIPLIER = BUILDER.comment("How much the Wisdom effect multiplies XP by per level (default 1.5)")
                 .defineInRange("wisdomMultiplier", 1.5, -Double.MAX_VALUE, Double.MAX_VALUE); // negative allowed, reverses effect
+        BUILDER.comment("Minimum amplifiers of the Erudition effect to allow getting each enchantment, set to 0 for level I, 1 for level II and 2 to disable")
+                .define("eruditionReadMe", "");
+        ERUDITION_FROST_WALKER_MIN_AMP = BUILDER.comment("Minimum amplifier for Frost Walker (default 0)")
+                .defineInRange("eruditionFrostWalkerMinAmp", 0, 0, 2);
+        ERUDITION_MENDING_MIN_AMP = BUILDER.comment("Minimum amplifier for Mending (default 0)")
+                .defineInRange("eruditionMendingMinAmp", 0, 0, 2);
+        ERUDITION_SOUL_SPEED_MIN_AMP = BUILDER.comment("Minimum amplifier for Soul Speed (default 1)")
+                .defineInRange("eruditionSoulSpeedMinAmp", 1, 0, 2);
+        ERUDITION_SWIFT_SNEAK_MIN_AMP = BUILDER.comment("Minimum amplifier for Swift Sneak (default 1)")
+                .defineInRange("eruditionSwiftSneakMinAmp", 1, 0, 2);
         IMPROVED_DIGESTION_MULTIPLIER = BUILDER.comment("How much the Improved Digestion effect multiplies exhaustion (hunger drain) by per level (default 0.5)")
                 .defineInRange("improvedDigestionMultiplier", 0.5, -Double.MAX_VALUE, Double.MAX_VALUE); // negative allowed, reverses effect
         IMPROVED_DIGESTION_ALLOW_SPRINT = BUILDER.comment("Allow sprinting at low hunger with the Improved Digestion effect (default true)")
@@ -295,6 +309,7 @@ public class ModCommonConfigs {
         return new SyncConfigPacket(ABV_BEER.get(), ABV_WINE.get(), ABV_CIDER.get(), ABV_MEAD.get(), ABV_SPIRIT_LOW.get(), ABV_SPIRIT_MID.get(),
                 ABV_SPIRIT_HIGH.get(), ABV_SPIRIT_MAX.get(), ABV_WHISKY.get(), ABV_BRANDY.get(), ABV_RUM.get(), ABV_VODKA.get(), ABV_GIN.get(),
                 ABV_TEQUILA.get(), CHARISMA_MULTIPLIER.get().floatValue(), STACK_SIZE_MOLASSES.get(), STACK_SIZE_KEG.get(), STACK_SIZE_GLASS.get(),
-                STACK_SIZE_DRINK.get(), IMPROVED_DIGESTION_ALLOW_SPRINT.get());
+                STACK_SIZE_DRINK.get(), IMPROVED_DIGESTION_ALLOW_SPRINT.get(), ERUDITION_FROST_WALKER_MIN_AMP.get(), ERUDITION_MENDING_MIN_AMP.get(),
+                ERUDITION_SOUL_SPEED_MIN_AMP.get(), ERUDITION_SWIFT_SNEAK_MIN_AMP.get());
     }
 }

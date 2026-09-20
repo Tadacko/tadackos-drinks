@@ -3,9 +3,9 @@ package net.tadacko.tadackosdrinks.network;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 import net.tadacko.tadackosdrinks.effect.CharismaEffect;
+import net.tadacko.tadackosdrinks.effect.EruditionEffect;
 import net.tadacko.tadackosdrinks.effect.ImprovedDigestionEffect;
 import net.tadacko.tadackosdrinks.item.ModItems;
-import net.tadacko.tadackosdrinks.mixin.LocalPlayerMixin;
 import net.tadacko.tadackosdrinks.util.Tooltips;
 
 import java.util.function.Supplier;
@@ -31,11 +31,16 @@ public class SyncConfigPacket {
     private final int stackSizeGlass;
     private final int stackSizeDrink;
     private final boolean improvedDigestionAllowSprint;
+    private final int eruditionFrostWalkerMinAmp;
+    private final int eruditionMendingMinAmp;
+    private final int eruditionSoulSpeedMinAmp;
+    private final int eruditionSwiftSneakMinAmp;
 
     public SyncConfigPacket(double ABVBeer, double ABVWine, double ABVCider, double ABVMead, double ABVSpiritLow, double ABVSpiritMid,
                             double ABVSpiritHigh, double ABVSpiritMax, double ABVWhisky, double ABVBrandy, double ABVRum, double ABVVodka, double ABVGin,
                             double ABVTequila, float charismaMultiplier, int stackSizeMolasses, int stackSizeKeg, int stackSizeGlass, int stackSizeDrink,
-                            boolean improvedDigestionAllowSprint) {
+                            boolean improvedDigestionAllowSprint, int eruditionFrostWalkerMinAmp, int eruditionMendingMinAmp, int eruditionSoulSpeedMinAmp,
+                            int eruditionSwiftSneakMinAmp) {
         this.ABVBeer = ABVBeer;
         this.ABVWine = ABVWine;
         this.ABVCider = ABVCider;
@@ -56,6 +61,10 @@ public class SyncConfigPacket {
         this.stackSizeGlass = stackSizeGlass;
         this.stackSizeDrink = stackSizeDrink;
         this.improvedDigestionAllowSprint = improvedDigestionAllowSprint;
+        this.eruditionFrostWalkerMinAmp = eruditionFrostWalkerMinAmp;
+        this.eruditionMendingMinAmp = eruditionMendingMinAmp;
+        this.eruditionSoulSpeedMinAmp = eruditionSoulSpeedMinAmp;
+        this.eruditionSwiftSneakMinAmp = eruditionSwiftSneakMinAmp;
     }
 
     public static void encode(SyncConfigPacket pkt, FriendlyByteBuf buf) {
@@ -79,12 +88,17 @@ public class SyncConfigPacket {
         buf.writeInt(pkt.stackSizeGlass);
         buf.writeInt(pkt.stackSizeDrink);
         buf.writeBoolean(pkt.improvedDigestionAllowSprint);
+        buf.writeInt(pkt.eruditionFrostWalkerMinAmp);
+        buf.writeInt(pkt.eruditionMendingMinAmp);
+        buf.writeInt(pkt.eruditionSoulSpeedMinAmp);
+        buf.writeInt(pkt.eruditionSwiftSneakMinAmp);
     }
 
     public static SyncConfigPacket decode(FriendlyByteBuf buf) {
         return new SyncConfigPacket(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(),
                 buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(),
-                buf.readFloat(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readBoolean());
+                buf.readFloat(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readBoolean(), buf.readInt(), buf.readInt(), buf.readInt(),
+                buf.readInt());
     }
 
     public static void handle(final SyncConfigPacket packet, Supplier<NetworkEvent.Context> ctxSupplier) {
@@ -102,6 +116,10 @@ public class SyncConfigPacket {
             ModItems.stackSizeKeg = packet.stackSizeKeg;
             ModItems.stackSizeGlass = packet.stackSizeGlass;
             ModItems.stackSizeDrink = packet.stackSizeDrink;
+            EruditionEffect.EruditionEventHandler.eruditionFrostWalkerMinAmp = packet.eruditionFrostWalkerMinAmp;
+            EruditionEffect.EruditionEventHandler.eruditionMendingMinAmp = packet.eruditionMendingMinAmp;
+            EruditionEffect.EruditionEventHandler.eruditionSoulSpeedMinAmp = packet.eruditionSoulSpeedMinAmp;
+            EruditionEffect.EruditionEventHandler.eruditionSwiftSneakMinAmp = packet.eruditionSwiftSneakMinAmp;
         });
         ctx.setPacketHandled(true);
     }

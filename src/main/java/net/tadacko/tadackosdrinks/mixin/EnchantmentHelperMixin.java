@@ -2,6 +2,7 @@ package net.tadacko.tadackosdrinks.mixin;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
@@ -19,11 +20,7 @@ import java.util.List;
 /** Mixin into EnchantmentHelper to add treasure enchantments to the available list */
 @Mixin(EnchantmentHelper.class)
 public class EnchantmentHelperMixin {
-    @Inject(
-            method = "getAvailableEnchantmentResults",
-            at = @At("RETURN"),
-            cancellable = true
-    )
+    @Inject(method = "getAvailableEnchantmentResults", at = @At("RETURN"), cancellable = true)
     private static void addTreasureEnchantments(int level, ItemStack stack, boolean treasureAllowed, CallbackInfoReturnable<List<EnchantmentInstance>> cir) {
         Player player = EruditionEffect.EruditionEventHandler.getCurrentEnchantingPlayer();
 
@@ -34,23 +31,51 @@ public class EnchantmentHelperMixin {
 
         List<EnchantmentInstance> originalList = cir.getReturnValue();
         List<EnchantmentInstance> newList = new ArrayList<>(originalList);
+        boolean isBook = stack.is(Items.BOOK);
 
-        if (effectAmplifier >= 0) {
-            if (Enchantments.FROST_WALKER.canEnchant(stack)) {
+        if (effectAmplifier == 0) {
+            if (EruditionEffect.EruditionEventHandler.eruditionFrostWalkerMinAmp == 0 &&
+                    (Enchantments.FROST_WALKER.canEnchant(stack) || (isBook && Enchantments.FROST_WALKER.isAllowedOnBooks()))) {
                 int enchLevel = getEnchantmentLevel(Enchantments.FROST_WALKER, level);
                 newList.add(new EnchantmentInstance(Enchantments.FROST_WALKER, enchLevel));
             }
 
-            if (Enchantments.MENDING.canEnchant(stack)) newList.add(new EnchantmentInstance(Enchantments.MENDING, 1));
-        }
+            if (EruditionEffect.EruditionEventHandler.eruditionMendingMinAmp == 0 &&
+                    (Enchantments.MENDING.canEnchant(stack) || (isBook && Enchantments.MENDING.isAllowedOnBooks())))
+                newList.add(new EnchantmentInstance(Enchantments.MENDING, 1));
 
-        if (effectAmplifier >= 1) {
-            if (Enchantments.SOUL_SPEED.canEnchant(stack)) {
+            if (EruditionEffect.EruditionEventHandler.eruditionSoulSpeedMinAmp == 0 &&
+                    (Enchantments.SOUL_SPEED.canEnchant(stack) || (isBook && Enchantments.SOUL_SPEED.isAllowedOnBooks()))) {
                 int enchLevel = getEnchantmentLevel(Enchantments.SOUL_SPEED, level);
                 newList.add(new EnchantmentInstance(Enchantments.SOUL_SPEED, enchLevel));
             }
 
-            if (Enchantments.SWIFT_SNEAK.canEnchant(stack)) {
+            if (EruditionEffect.EruditionEventHandler.eruditionSwiftSneakMinAmp == 0 &&
+                    (Enchantments.SWIFT_SNEAK.canEnchant(stack) || (isBook && Enchantments.SWIFT_SNEAK.isAllowedOnBooks()))) {
+                int enchLevel = getEnchantmentLevel(Enchantments.SWIFT_SNEAK, level);
+                newList.add(new EnchantmentInstance(Enchantments.SWIFT_SNEAK, enchLevel));
+            }
+        }
+
+        if (effectAmplifier == 1) {
+            if (EruditionEffect.EruditionEventHandler.eruditionFrostWalkerMinAmp <= 1 &&
+                    (Enchantments.FROST_WALKER.canEnchant(stack) || (isBook && Enchantments.FROST_WALKER.isAllowedOnBooks()))) {
+                int enchLevel = getEnchantmentLevel(Enchantments.FROST_WALKER, level);
+                newList.add(new EnchantmentInstance(Enchantments.FROST_WALKER, enchLevel));
+            }
+
+            if (EruditionEffect.EruditionEventHandler.eruditionMendingMinAmp <= 1 &&
+                    (Enchantments.MENDING.canEnchant(stack) || (isBook && Enchantments.MENDING.isAllowedOnBooks())))
+                newList.add(new EnchantmentInstance(Enchantments.MENDING, 1));
+
+            if (EruditionEffect.EruditionEventHandler.eruditionSoulSpeedMinAmp <= 1 &&
+                    (Enchantments.SOUL_SPEED.canEnchant(stack) || (isBook && Enchantments.SOUL_SPEED.isAllowedOnBooks()))) {
+                int enchLevel = getEnchantmentLevel(Enchantments.SOUL_SPEED, level);
+                newList.add(new EnchantmentInstance(Enchantments.SOUL_SPEED, enchLevel));
+            }
+
+            if (EruditionEffect.EruditionEventHandler.eruditionSwiftSneakMinAmp <= 1 &&
+                    (Enchantments.SWIFT_SNEAK.canEnchant(stack) || (isBook && Enchantments.SWIFT_SNEAK.isAllowedOnBooks()))) {
                 int enchLevel = getEnchantmentLevel(Enchantments.SWIFT_SNEAK, level);
                 newList.add(new EnchantmentInstance(Enchantments.SWIFT_SNEAK, enchLevel));
             }
