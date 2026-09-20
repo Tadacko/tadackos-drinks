@@ -2,12 +2,11 @@ package net.tadacko.tadackosdrinks.util;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.TemptGoal;
-import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.Cow;
-import net.minecraft.world.entity.animal.Sheep;
+import net.minecraft.world.entity.animal.*;
 import net.minecraft.world.entity.animal.goat.Goat;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.animal.horse.Llama;
@@ -15,6 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CampfireBlock;
@@ -67,11 +67,11 @@ public class BarleyFunctionalityHandler {
 
     @SubscribeEvent
     public static void onFeed(PlayerInteractEvent.EntityInteract event) {
+        Player player = event.getEntity();
         ItemStack stack = event.getItemStack();
         if (event.getTarget() instanceof Animal animal && !(event.getTarget() instanceof AbstractHorse) && stack.getItem() == ModItems.BARLEY.get() &&
                 animal.isFood(new ItemStack(Items.WHEAT))) {
             boolean clientSide = animal.level().isClientSide;
-            Player player = event.getEntity();
             int age = animal.getAge();
             if (!clientSide && age == 0 && animal.canFallInLove()) {
                 if (!player.getAbilities().instabuild) stack.shrink(1);
@@ -94,10 +94,60 @@ public class BarleyFunctionalityHandler {
                 event.setCancellationResult(InteractionResult.CONSUME);
                 return;
             }
+        } else if (event.getTarget() instanceof Animal animal && !(event.getTarget() instanceof AbstractHorse) &&
+                (stack.getItem() == ModItems.WHEAT_SEEDS_MALTED.get() || stack.getItem() == ModItems.WHEAT_SEEDS_CRUSHED.get() ||
+                stack.getItem() == ModItems.BARLEY_SEEDS.get() || stack.getItem() == ModItems.BARLEY_SEEDS_MALTED.get() ||
+                stack.getItem() == ModItems.BARLEY_SEEDS_CRUSHED.get() || stack.getItem() == ModItems.HOP_SEEDS.get() ||
+                stack.getItem() == ModItems.GRAPE_SEEDS_RED.get() || stack.getItem() == ModItems.GRAPE_SEEDS_WHITE.get())) {
+            if (animal.isFood(new ItemStack(Items.WHEAT_SEEDS))) {
+                boolean clientSide = animal.level().isClientSide;
+                int age = animal.getAge();
+                if (!clientSide && age == 0 && animal.canFallInLove()) {
+                    if (!player.getAbilities().instabuild) stack.shrink(1);
+                    animal.setInLove(player);
+                    event.setCanceled(true);
+                    event.setCancellationResult(InteractionResult.SUCCESS);
+                    return;
+                }
+
+                if (animal.isBaby()) {
+                    if (!player.getAbilities().instabuild) stack.shrink(1);
+                    animal.ageUp(Animal.getSpeedUpSecondsWhenFeeding(-age), true);
+                    event.setCanceled(true);
+                    event.setCancellationResult(InteractionResult.sidedSuccess(clientSide));
+                    return;
+                }
+
+                if (clientSide) {
+                    event.setCanceled(true);
+                    event.setCancellationResult(InteractionResult.CONSUME);
+                    return;
+                }
+            } else if (animal instanceof Parrot parrot) {
+                if (!parrot.isTame()) {
+                    if (!player.getAbilities().instabuild) stack.shrink(1);
+
+                    Level level = parrot.level();
+                    if (!parrot.isSilent()) {
+                        level.playSound((Player)null, parrot.getX(), parrot.getY(), parrot.getZ(), SoundEvents.PARROT_EAT, parrot.getSoundSource(),
+                                1.0F, 1.0F + (level.random.nextFloat() - level.random.nextFloat()) * 0.2F);
+                    }
+
+                    if (!level.isClientSide) {
+                        if (level.random.nextInt(10) == 0 && !net.minecraftforge.event.ForgeEventFactory.onAnimalTame(parrot, player)) {
+                            parrot.tame(player);
+                            level.broadcastEntityEvent(parrot, (byte)7);
+                        } else level.broadcastEntityEvent(parrot, (byte)6);
+                    }
+
+
+                    event.setCanceled(true);
+                    event.setCancellationResult(InteractionResult.sidedSuccess(level.isClientSide));
+                }
+            }
         } else if (event.getTarget() instanceof AbstractHorse horse && (stack.getItem() == ModItems.BARLEY.get() ||
                 stack.getItem() == ModBlocks.BARLEY_BLOCK.get().asItem()) && horse.isFood(new ItemStack(Items.HAY_BLOCK))) {
             boolean clientSide = horse.level().isClientSide;
-            Player player = event.getEntity();
             if (!player.getAbilities().instabuild) stack.shrink(1);
             boolean flag = false;
             float f = 0.0F;
@@ -157,13 +207,18 @@ public class BarleyFunctionalityHandler {
     public static void onAnimalJoin(EntityJoinLevelEvent event) {
         if (event.getLevel().isClientSide()) return;
         if (!(event.getEntity() instanceof Animal animal &&
-                (animal instanceof Cow || animal instanceof Goat || animal instanceof Sheep || animal instanceof Llama))) return;
+                (animal instanceof Cow || animal instanceof Goat || animal instanceof Sheep || animal instanceof Chicken || animal instanceof Llama))) return;
 
         boolean alreadyAdded = animal.goalSelector.getAvailableGoals().stream().anyMatch(wrapped -> wrapped.getGoal() instanceof BarleyTemptGoal);
         if (!alreadyAdded) {
             if (animal instanceof Cow || animal instanceof Goat)
                 animal.goalSelector.addGoal(3, new BarleyTemptGoal(animal, 1.25D, false));
             else if (animal instanceof Sheep) animal.goalSelector.addGoal(3, new BarleyTemptGoal(animal, 1.1D, false));
+        }
+        alreadyAdded = animal.goalSelector.getAvailableGoals().stream().anyMatch(wrapped -> wrapped.getGoal() instanceof SeedTemptGoal);
+        if (!alreadyAdded) {
+            if (animal instanceof Chicken)
+                animal.goalSelector.addGoal(3, new SeedTemptGoal(animal, 1.0D, false));
         }
         alreadyAdded = animal.goalSelector.getAvailableGoals().stream().anyMatch(wrapped -> wrapped.getGoal() instanceof HayTemptGoal);
         if (!alreadyAdded && animal instanceof Llama) animal.goalSelector.addGoal(5, new HayTemptGoal(animal, 1.25D, false));
@@ -172,6 +227,14 @@ public class BarleyFunctionalityHandler {
     private static class BarleyTemptGoal extends TemptGoal {
         BarleyTemptGoal(PathfinderMob mob, double speedModifier, boolean canScare) {
             super(mob, speedModifier, Ingredient.of(ModItems.BARLEY.get()), canScare);
+        }
+    }
+
+    private static class SeedTemptGoal extends TemptGoal {
+        SeedTemptGoal(PathfinderMob mob, double speedModifier, boolean canScare) {
+            super(mob, speedModifier, Ingredient.of(ModItems.WHEAT_SEEDS_MALTED.get(), ModItems.WHEAT_SEEDS_CRUSHED.get(), ModItems.BARLEY_SEEDS.get(),
+                    ModItems.BARLEY_SEEDS_MALTED.get(), ModItems.BARLEY_SEEDS_CRUSHED.get(), ModItems.HOP_SEEDS.get(), ModItems.GRAPE_SEEDS_RED.get(),
+                    ModItems.GRAPE_SEEDS_WHITE.get()), canScare);
         }
     }
 
