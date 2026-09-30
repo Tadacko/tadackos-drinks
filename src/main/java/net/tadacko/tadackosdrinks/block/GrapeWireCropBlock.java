@@ -25,6 +25,7 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.common.ForgeHooks;
 import net.tadacko.tadackosdrinks.item.ModItems;
 
 import javax.annotation.Nullable;
@@ -49,10 +50,7 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
 
     public GrapeWireCropBlock(Properties properties, Supplier<Item> grapeItem, Supplier<Block> sameVariantWire) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any()
-                .setValue(AGE, 0)
-                .setValue(FACING, Direction.NORTH)
-                .setValue(UNSUPPORTED, 0));
+        this.registerDefaultState(this.stateDefinition.any().setValue(AGE, 0).setValue(FACING, Direction.NORTH).setValue(UNSUPPORTED, 0));
         this.grapeItem = grapeItem;
         this.sameVariantWire = sameVariantWire;
     }
@@ -72,28 +70,28 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
 
         int age = state.getValue(AGE);
 
-        if (age == 0 && random.nextInt(GRAPE_TIME) == 0) {
-            BlockState grown = state.setValue(AGE, 1);
-            world.setBlock(pos, grown, Block.UPDATE_ALL);
+        if (age == 0 && ForgeHooks.onCropsGrowPre(world, pos, state, random.nextInt(GRAPE_TIME) == 0)) {
+            world.setBlock(pos, state.setValue(AGE, 1), Block.UPDATE_ALL);
+            ForgeHooks.onCropsGrowPost(world, pos, state);
             return;
         }
 
-        if (random.nextInt(GrapeCropBlock.SPREAD_TIME) != 0) return;
+        if (!ForgeHooks.onCropsGrowPre(world, pos, state, random.nextInt(GrapeCropBlock.SPREAD_TIME) == 0)) return;
 
         Direction facing = state.getValue(FACING);
-        Direction dir1 = facing;
-        Direction dir2 = facing.getOpposite();
+        boolean spread = false;
 
-        for (Direction dir : new Direction[]{dir1, dir2}) {
+        for (Direction dir : new Direction[]{facing, facing.getOpposite()}) {
             BlockPos target = pos.relative(dir);
             if (world.getBlockState(target).is(ModBlocks.TRELLIS_WIRE.get())) {
                 // place child without doing support checks here; the child will validate itself
-                BlockState child = this.sameVariantWire.get().defaultBlockState()
-                        .setValue(AGE, 0)
-                        .setValue(FACING, facing);
+                BlockState child = this.sameVariantWire.get().defaultBlockState().setValue(AGE, 0).setValue(FACING, facing);
                 world.setBlock(target, child, Block.UPDATE_ALL);
+                spread = true;
             }
         }
+
+        if (spread) ForgeHooks.onCropsGrowPost(world, pos, state);
     }
 
     @Override
@@ -176,9 +174,7 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
         for (Direction dir : new Direction[]{facing, facing.getOpposite()}) {
             BlockPos target = pos.relative(dir);
             if (world.getBlockState(target).is(ModBlocks.TRELLIS_WIRE.get())) {
-                BlockState child = this.sameVariantWire.get().defaultBlockState()
-                        .setValue(AGE, 0)
-                        .setValue(FACING, facing);
+                BlockState child = this.sameVariantWire.get().defaultBlockState().setValue(AGE, 0).setValue(FACING, facing);
                 world.setBlock(target, child, Block.UPDATE_ALL);
                 return;
             }
@@ -219,11 +215,8 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
         BlockState updated = state.setValue(UNSUPPORTED, next);
         level.setBlock(pos, updated, Block.UPDATE_ALL);
 
-        if (next == UNSUPPORTED_THRESHOLD) {
-            level.destroyBlock(pos, true);
-        } else {
-            level.scheduleTick(pos, this, CHECK_DELAY);
-        }
+        if (next == UNSUPPORTED_THRESHOLD) level.destroyBlock(pos, true);
+        else level.scheduleTick(pos, this, CHECK_DELAY);
     }
 
     @Override
@@ -284,11 +277,8 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
 
         // Now destroy them (server-side). Use ServerLevel if available to drop properly.
         for (BlockPos pos : toDestroy) {
-            if (level instanceof ServerLevel server) {
-                server.destroyBlock(pos, true); // drops items
-            } else {
-                level.destroyBlock(pos, true);
-            }
+            if (level instanceof ServerLevel server) server.destroyBlock(pos, true); // drops items
+            else level.destroyBlock(pos, true);
         }
     }
 }
