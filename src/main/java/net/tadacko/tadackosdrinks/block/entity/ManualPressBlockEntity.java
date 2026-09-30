@@ -11,7 +11,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -40,19 +39,15 @@ public class ManualPressBlockEntity extends BlockEntity implements GeoBlockEntit
     public boolean isProcessing = false;
     private int progress = 0;
     private boolean isReturning = false;
-    private static final int MAX_PROGRESS = 60; // 3 seconds
-    private static final int TOTAL_ANIMATION_TIME = 120; // 6 seconds total
+    public static int pressMaxProgress = 60; // 3 s, fallback default, overridden by config value
+    private static int getTotalAnimationTime() { return pressMaxProgress * 2; } // 6 s total
 
     private final FluidTank fluidTank = new FluidTank(1000) {
         @Override
-        protected void onContentsChanged() {
-            setChanged();
-        }
+        protected void onContentsChanged() { setChanged(); }
 
         @Override
-        public boolean isFluidValid(FluidStack stack) {
-            return VALID_FLUIDS.contains(stack.getFluid());
-        }
+        public boolean isFluidValid(FluidStack stack) { return VALID_FLUIDS.contains(stack.getFluid()); }
     };
 
     private static final Map<Item, Fluid> ITEM_TO_FLUID = Map.ofEntries(
@@ -100,26 +95,18 @@ public class ManualPressBlockEntity extends BlockEntity implements GeoBlockEntit
     }
 
     @Override
-    public void handleUpdateTag(CompoundTag tag) {
-        this.load(tag);
-    }
+    public void handleUpdateTag(CompoundTag tag) { this.load(tag); }
 
     @Nullable
     @Override
-    public ClientboundBlockEntityDataPacket getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    public ClientboundBlockEntityDataPacket getUpdatePacket() { return ClientboundBlockEntityDataPacket.create(this); }
 
     @Override
-    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt) {
-        this.load(pkt.getTag());
-    }
+    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt) { this.load(pkt.getTag()); }
 
     private AnimatableInstanceCache cache = new SingletonAnimatableInstanceCache(this);
 
-    public ManualPressBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.MANUAL_PRESS.get(), pos, state);
-    }
+    public ManualPressBlockEntity(BlockPos pos, BlockState state) { super(ModBlockEntities.MANUAL_PRESS.get(), pos, state); }
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
@@ -127,33 +114,29 @@ public class ManualPressBlockEntity extends BlockEntity implements GeoBlockEntit
     }
 
     private <T extends GeoAnimatable> PlayState predicate(AnimationState<T> tAnimationState) {
-        if (this.isProcessing || this.isReturning) {
-            // Play the "use" animation when processing or returning
+        if (this.isProcessing || this.isReturning)
             tAnimationState.getController().setAnimation(RawAnimation.begin().then("use", Animation.LoopType.PLAY_ONCE));
-        } else {
-            // Play idle animation when idle
-            tAnimationState.getController().setAnimation(RawAnimation.begin().then("idle", Animation.LoopType.LOOP));
-        }
+        else tAnimationState.getController().setAnimation(RawAnimation.begin().then("idle", Animation.LoopType.LOOP));
         return PlayState.CONTINUE;
     }
 
     @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return cache;
-    }
+    public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }
 
     @Override
     public double getTick(Object blockEntity) {
         // When processing or returning, control animation progress via progress
-        if (this.isProcessing || this.isReturning) {
-            if (this.progress <= MAX_PROGRESS) {
+        if (isProcessing || isReturning) {
+            if (progress <= pressMaxProgress) {
                 // Forward animation: 0 to 60
-                return this.progress;
+                if (pressMaxProgress == 60) return progress;
+                return progress * 60f / pressMaxProgress;
             } else {
                 // Reverse animation: 60 back down to 0
                 // When progress is 61, return 59
                 // When progress is 120, return 0
-                return TOTAL_ANIMATION_TIME - this.progress;
+                if (pressMaxProgress == 60) return getTotalAnimationTime() - progress;
+                return getTotalAnimationTime() * 60f / pressMaxProgress - progress * 60f / pressMaxProgress;
             }
         }
         // When idle, use normal game ticks
@@ -162,7 +145,6 @@ public class ManualPressBlockEntity extends BlockEntity implements GeoBlockEntit
 
     public static void tick(Level level, BlockPos pos, BlockState state, ManualPressBlockEntity entity) {
         // ticker server side only, no guard needed
-
         FluidStack fluidStack = entity.fluidTank.getFluid();
         Fluid currentFluid = fluidStack.getFluid();
 
@@ -181,7 +163,7 @@ public class ManualPressBlockEntity extends BlockEntity implements GeoBlockEntit
             }
             entity.progress++;
 
-            if (entity.progress >= MAX_PROGRESS) {
+            if (entity.progress >= pressMaxProgress) {
                 BlockState resultBlockState = PRESSING_RESULTS.get(currentFluid).defaultBlockState();
 
                 level.setBlock(pos.below(), resultBlockState, 3);
@@ -208,7 +190,7 @@ public class ManualPressBlockEntity extends BlockEntity implements GeoBlockEntit
             }
             entity.progress++;
 
-            if (entity.progress >= TOTAL_ANIMATION_TIME) {
+            if (entity.progress >= getTotalAnimationTime()) {
                 // Animation complete, reset everything
                 entity.isReturning = false;
                 entity.progress = 0;
@@ -231,8 +213,7 @@ public class ManualPressBlockEntity extends BlockEntity implements GeoBlockEntit
         BlockPos pos = this.getBlockPos();
         BlockState state = this.getBlockState();
 
-        boolean isGrapes = heldItem.getItem() == ModItems.GRAPES_RED.get() ||
-                heldItem.getItem() == ModItems.GRAPES_WHITE.get();
+        boolean isGrapes = heldItem.getItem() == ModItems.GRAPES_RED.get() || heldItem.getItem() == ModItems.GRAPES_WHITE.get();
 
         boolean isSugarCane = heldItem.getItem() == ModItems.SUGAR_CANE_CRUSHED.get();
 
@@ -264,9 +245,7 @@ public class ManualPressBlockEntity extends BlockEntity implements GeoBlockEntit
                 this.fluidTank.fill(fluidStack, IFluidHandler.FluidAction.EXECUTE);
                 level.playSound(null, pos, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 1.0F, 1.0F);
 
-                if (!player.isCreative()) {
-                    heldItem.shrink(insertCount);
-                }
+                if (!player.isCreative()) heldItem.shrink(insertCount);
 
                 level.sendBlockUpdated(pos, state, state, 3);
                 setChanged(level, pos, state);
@@ -283,9 +262,7 @@ public class ManualPressBlockEntity extends BlockEntity implements GeoBlockEntit
             SoundEvent sound = wasDrained ? SoundEvents.BUCKET_FILL : SoundEvents.BUCKET_EMPTY;
             level.playSound(null, pos, sound, SoundSource.BLOCKS, 1.0F, 1.0F);
 
-            if (wasDrained) {
-                this.progress = 0;
-            }
+            if (wasDrained) this.progress = 0;
 
             level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
             setChanged(level, pos, state);
@@ -295,21 +272,13 @@ public class ManualPressBlockEntity extends BlockEntity implements GeoBlockEntit
         return false;
     }
 
-    public FluidTank getFluidTank() {
-        return fluidTank;
-    }
+    public FluidTank getFluidTank() { return fluidTank; }
 
-    public int getProgress() {
-        return progress;
-    }
+    public int getProgress() { return progress; }
 
-    public boolean isProcessing() {
-        return isProcessing;
-    }
+    public boolean isProcessing() { return isProcessing; }
 
-    public boolean isReturning() {
-        return isReturning;
-    }
+    public boolean isReturning() { return isReturning; }
 
     // returns a tag suitable for putting into an ItemStack under "BlockEntityTag"
     public CompoundTag saveToItemTag() {

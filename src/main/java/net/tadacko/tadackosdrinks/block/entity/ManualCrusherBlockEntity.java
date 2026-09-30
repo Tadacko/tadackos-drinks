@@ -34,7 +34,7 @@ import java.util.Map;
 public class ManualCrusherBlockEntity extends BlockEntity implements GeoBlockEntity {
     public boolean isProcessing = false;
     private int progress = 0;
-    private static final int MAX_PROGRESS = 120; // 6 s
+    public static int crusherMaxProgress = 120; // 6 s, fallback default, overridden by config value
 
     private final ItemStackHandler inventory = new ItemStackHandler(1);
 
@@ -52,9 +52,7 @@ public class ManualCrusherBlockEntity extends BlockEntity implements GeoBlockEnt
             Map.entry(Items.APPLE, ModFluids.MUST_APPLE.cauldron().get())
     );
 
-    public ManualCrusherBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.MANUAL_CRUSHER.get(), pos, state);
-    }
+    public ManualCrusherBlockEntity(BlockPos pos, BlockState state) { super(ModBlockEntities.MANUAL_CRUSHER.get(), pos, state); }
 
     @Override
     public void saveAdditional(CompoundTag nbt) {
@@ -81,15 +79,11 @@ public class ManualCrusherBlockEntity extends BlockEntity implements GeoBlockEnt
     }
 
     @Override
-    public void handleUpdateTag(CompoundTag tag) {
-        this.load(tag);
-    }
+    public void handleUpdateTag(CompoundTag tag) { this.load(tag); }
 
     @Nullable
     @Override
-    public ClientboundBlockEntityDataPacket getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    public ClientboundBlockEntityDataPacket getUpdatePacket() { return ClientboundBlockEntityDataPacket.create(this); }
 
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt) {
@@ -98,9 +92,7 @@ public class ManualCrusherBlockEntity extends BlockEntity implements GeoBlockEnt
             this.load(tag);
 
             // Force re-render on client
-            if (level != null && level.isClientSide) {
-                level.sendBlockUpdated(this.getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
-            }
+            if (level != null && level.isClientSide) level.sendBlockUpdated(this.getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
     }
 
@@ -112,22 +104,19 @@ public class ManualCrusherBlockEntity extends BlockEntity implements GeoBlockEnt
     }
 
     private <T extends GeoAnimatable> PlayState predicate(AnimationState<T> tAnimationState) {
-        if (this.isProcessing) {
-            tAnimationState.getController().setAnimation(RawAnimation.begin().then("use", Animation.LoopType.PLAY_ONCE));
-        } else {
-            tAnimationState.getController().setAnimation(RawAnimation.begin().then("idle", Animation.LoopType.LOOP));
-        }
+        if (this.isProcessing) tAnimationState.getController().setAnimation(RawAnimation.begin().then("use", Animation.LoopType.PLAY_ONCE));
+        else tAnimationState.getController().setAnimation(RawAnimation.begin().then("idle", Animation.LoopType.LOOP));
         return PlayState.CONTINUE;
     }
 
     @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return cache;
-    }
+    public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }
 
     @Override
     public double getTick(Object blockEntity) {
-        return RenderUtils.getCurrentTick();
+        double tick = RenderUtils.getCurrentTick();
+        if (isProcessing && crusherMaxProgress != 120) return tick * 120f / crusherMaxProgress;
+        return tick;
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, ManualCrusherBlockEntity entity) {
@@ -135,13 +124,13 @@ public class ManualCrusherBlockEntity extends BlockEntity implements GeoBlockEnt
         if (!entity.isProcessing) return;
 
         entity.progress++;
-        if (entity.progress % 5 == 0 && entity.progress < MAX_PROGRESS - 20) {
+        if (entity.progress % 5 == 0 && entity.progress < crusherMaxProgress - 20) {
             level.playSeededSound(null, (double) pos.getX() + 0.5D, (double) pos.getY() + 0.5D, (double) pos.getZ() + 0.5D,
                     SoundEvents.GRINDSTONE_USE, SoundSource.BLOCKS, 0.1F, 0.6F, 149684163);
             //level.playSound(null, pos, SoundEvents.GRINDSTONE_USE, SoundSource.BLOCKS, 0.1F, 0.5F);
         }
 
-        if (entity.progress >= MAX_PROGRESS) {
+        if (entity.progress >= crusherMaxProgress) {
             Item originalInput = entity.inventory.getStackInSlot(0).getItem();
             // fluid results
             if (FLUID_RESULTS.containsKey(originalInput)) {
@@ -163,11 +152,8 @@ public class ManualCrusherBlockEntity extends BlockEntity implements GeoBlockEnt
             Item crushedItem = CRUSHING_RESULTS.get(inputStack.getItem());
             ItemStack crushedStack;
 
-            if (inputStack.getItem() == ModItems.AGAVE_PINA_BAKED.get()) {
-                crushedStack = new ItemStack(crushedItem, 24 * inputStack.getCount());
-            } else {
-                crushedStack = new ItemStack(crushedItem, inputStack.getCount());
-            }
+            if (inputStack.getItem() == ModItems.AGAVE_PINA_BAKED.get()) crushedStack = new ItemStack(crushedItem, 24 * inputStack.getCount());
+            else crushedStack = new ItemStack(crushedItem, inputStack.getCount());
 
             ItemEntity itemEntity = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, crushedStack);
             level.addFreshEntity(itemEntity);
@@ -186,8 +172,7 @@ public class ManualCrusherBlockEntity extends BlockEntity implements GeoBlockEnt
         ItemStack heldItem = player.getItemInHand(hand);
 
         boolean isDryCrushable = CRUSHING_RESULTS.containsKey(heldItem.getItem());
-        boolean isGrapes = heldItem.getItem() == ModItems.GRAPES_RED.get() ||
-                heldItem.getItem() == ModItems.GRAPES_WHITE.get();
+        boolean isGrapes = heldItem.getItem() == ModItems.GRAPES_RED.get() || heldItem.getItem() == ModItems.GRAPES_WHITE.get();
         boolean isApple = heldItem.getItem() == Items.APPLE;
 
         if (isGrapes || isApple) {
@@ -216,9 +201,7 @@ public class ManualCrusherBlockEntity extends BlockEntity implements GeoBlockEnt
             // put in inventory for rendering
             this.inventory.setStackInSlot(0, new ItemStack(heldItem.getItem(), insertCount));
 
-            if (!player.isCreative()) {
-                heldItem.shrink(insertCount);
-            }
+            if (!player.isCreative()) heldItem.shrink(insertCount);
 
             this.progress = 0;
             this.isProcessing = true;
@@ -248,18 +231,14 @@ public class ManualCrusherBlockEntity extends BlockEntity implements GeoBlockEnt
     }
 
     // for renderer
-    public ItemStack getSeedStack() {
-        return this.inventory.getStackInSlot(0);
-    }
+    public ItemStack getSeedStack() { return this.inventory.getStackInSlot(0); }
 
     private void finishProcessing(Level level, BlockPos pos, BlockState state) {
         this.isProcessing = false;
         this.progress = 0;
         this.inventory.setStackInSlot(0, ItemStack.EMPTY);
 
-        if (!level.isClientSide) {
-            level.sendBlockUpdated(pos, state, state, 3);
-        }
+        if (!level.isClientSide) level.sendBlockUpdated(pos, state, state, 3);
         this.setChanged();
     }
 }

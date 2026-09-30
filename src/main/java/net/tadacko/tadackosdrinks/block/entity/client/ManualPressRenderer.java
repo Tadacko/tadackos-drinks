@@ -38,9 +38,7 @@ public class ManualPressRenderer implements BlockEntityRenderer<ManualPressBlock
 
         Fluid fluid = fluidStack.getFluid();
         IClientFluidTypeExtensions fluidTypeExtensions = IClientFluidTypeExtensions.of(fluid);
-        TextureAtlasSprite sprite = Minecraft.getInstance()
-                .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                .apply(fluidTypeExtensions.getStillTexture());
+        TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(fluidTypeExtensions.getStillTexture());
 
         int color = fluidTypeExtensions.getTintColor(fluidStack);
         float red = ((color >> 16) & 0xFF) / 255f;
@@ -106,26 +104,17 @@ public class ManualPressRenderer implements BlockEntityRenderer<ManualPressBlock
         if (!blockEntity.isProcessing() && !blockEntity.isReturning()) return 1.0f; // Full height when idle
 
         float currentTime = blockEntity.getProgress() + partialTick - 2; // bandaid fix for gap
+        if (ManualPressBlockEntity.pressMaxProgress != 60) currentTime = currentTime * 60f / ManualPressBlockEntity.pressMaxProgress;
         float timeToBottom = 55f;
         // total time = 120f
 
-        if (currentTime <= timeToBottom) {
-            // Forward animation: squish from 1.0 to 0.0
-            return 1.0f - (currentTime / timeToBottom);
-        } else {
-            return 0f;
-        }
+        if (currentTime <= timeToBottom) return 1.0f - (currentTime / timeToBottom); // Forward animation: squish from 1.0 to 0.0
+        else return 0f;
     }
 
-    private void renderQuad(VertexConsumer consumer, Matrix4f matrix,
-                            float x0, float y0, float z0,
-                            float x1, float y1, float z1,
-                            float x2, float y2, float z2,
-                            float x3, float y3, float z3,
-                            TextureAtlasSprite sprite,
-                            float r, float g, float b, float a,
-                            int light, float normalX, float normalY, float normalZ) {
-
+    private void renderQuad(VertexConsumer consumer, Matrix4f matrix, float x0, float y0, float z0, float x1, float y1, float z1,
+                            float x2, float y2, float z2, float x3, float y3, float z3, TextureAtlasSprite sprite,
+                            float r, float g, float b, float a, int light, float normalX, float normalY, float normalZ) {
         float minU = sprite.getU0();
         float maxU = sprite.getU1();
         float minV = sprite.getV0();

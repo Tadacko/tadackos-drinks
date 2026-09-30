@@ -42,6 +42,16 @@ public class ModCommonConfigs {
     public static final ForgeConfigSpec.IntValue STACK_SIZE_KEG;
     public static final ForgeConfigSpec.IntValue STACK_SIZE_GLASS;
     public static final ForgeConfigSpec.IntValue STACK_SIZE_DRINK;
+    public static final ForgeConfigSpec.IntValue CRUSHER_MAX_PROGRESS;
+    public static final ForgeConfigSpec.IntValue PRESS_MAX_PROGRESS;
+    public static final ForgeConfigSpec.IntValue BARREL_MAX_PROGRESS;
+    public static final ForgeConfigSpec.IntValue BARREL_MAX_AGING_PROGRESS;
+    public static final ForgeConfigSpec.IntValue POT_MAX_PROGRESS;
+    public static final ForgeConfigSpec.IntValue POT_STILL_MAX_PROGRESS;
+    public static final ForgeConfigSpec.IntValue COLUMN_STILL_2_MAX_PROGRESS;
+    public static final ForgeConfigSpec.IntValue COLUMN_STILL_4_MAX_PROGRESS;
+    public static final ForgeConfigSpec.IntValue COLUMN_STILL_6_MAX_PROGRESS;
+    public static final ForgeConfigSpec.IntValue COLUMN_STILL_8_MAX_PROGRESS;
     public static final ForgeConfigSpec.DoubleValue ABV_BEER;
     public static final ForgeConfigSpec.DoubleValue ABV_WINE;
     public static final ForgeConfigSpec.DoubleValue ABV_CIDER;
@@ -116,6 +126,26 @@ public class ModCommonConfigs {
                 .defineInRange("stackSizeGlass", 16, 1, 64);
         STACK_SIZE_DRINK = BUILDER.comment("How much Drinks stack to (default 1)")
                 .defineInRange("stackSizeDrink", 1, 1, 64);
+        CRUSHER_MAX_PROGRESS = BUILDER.comment("How much time in ticks crushing takes in the Manual Crusher (default 120)")
+                .defineInRange("crusherMaxProgress", 120, 1, Integer.MAX_VALUE);
+        PRESS_MAX_PROGRESS = BUILDER.comment("How much time in ticks pressing takes in the Manual Press (default 60)")
+                .defineInRange("pressMaxProgress", 60, 1, Integer.MAX_VALUE);
+        BARREL_MAX_PROGRESS = BUILDER.comment("How much time in ticks fermentation takes in the Fermenting Barrel (default 72000)")
+                .defineInRange("barrelMaxProgress", 72000, 1, Integer.MAX_VALUE);
+        BARREL_MAX_AGING_PROGRESS = BUILDER.comment("How much time in ticks aging takes in the Fermenting Barrel (default 576000)")
+                .defineInRange("barrelMaxAgingProgress", 576000, 1, Integer.MAX_VALUE);
+        POT_MAX_PROGRESS = BUILDER.comment("How much time in ticks boiling takes in the Copper Pot (default 2400)")
+                .defineInRange("potMaxProgress", 2400, 1, Integer.MAX_VALUE);
+        POT_STILL_MAX_PROGRESS = BUILDER.comment("How much time in ticks distillation takes in the Pot Still (default 2400)")
+                .defineInRange("potStillMaxProgress", 2400, 1, Integer.MAX_VALUE);
+        COLUMN_STILL_2_MAX_PROGRESS = BUILDER.comment("How much time in ticks distillation takes in a 2 block tall Column Still (default 1200)")
+                .defineInRange("columnStill2MaxProgress", 1200, 1, Integer.MAX_VALUE);
+        COLUMN_STILL_4_MAX_PROGRESS = BUILDER.comment("How much time in ticks distillation takes in a 4 block tall Column Still (default 1200)")
+                .defineInRange("columnStill4MaxProgress", 1200, 1, Integer.MAX_VALUE);
+        COLUMN_STILL_6_MAX_PROGRESS = BUILDER.comment("How much time in ticks distillation takes in a 6 block tall Column Still (default 1600)")
+                .defineInRange("columnStill6MaxProgress", 1600, 1, Integer.MAX_VALUE);
+        COLUMN_STILL_8_MAX_PROGRESS = BUILDER.comment("How much time in ticks distillation takes in an 8 block tall Column Still (default 2400)")
+                .defineInRange("columnStill8MaxProgress", 2400, 1, Integer.MAX_VALUE);
         BUILDER.push("Drinks");
         ABV_BEER = BUILDER.comment("Alcohol by volume of Beer in decimal (default 0.05)")
                 .defineInRange("ABVBeer", 0.05, -Double.MAX_VALUE, Double.MAX_VALUE); // negative allowed, reverses effect?
@@ -310,6 +340,8 @@ public class ModCommonConfigs {
                 ABV_SPIRIT_HIGH.get(), ABV_SPIRIT_MAX.get(), ABV_WHISKY.get(), ABV_BRANDY.get(), ABV_RUM.get(), ABV_VODKA.get(), ABV_GIN.get(),
                 ABV_TEQUILA.get(), CHARISMA_MULTIPLIER.get().floatValue(), STACK_SIZE_MOLASSES.get(), STACK_SIZE_KEG.get(), STACK_SIZE_GLASS.get(),
                 STACK_SIZE_DRINK.get(), IMPROVED_DIGESTION_ALLOW_SPRINT.get(), ERUDITION_FROST_WALKER_MIN_AMP.get(), ERUDITION_MENDING_MIN_AMP.get(),
-                ERUDITION_SOUL_SPEED_MIN_AMP.get(), ERUDITION_SWIFT_SNEAK_MIN_AMP.get());
+                ERUDITION_SOUL_SPEED_MIN_AMP.get(), ERUDITION_SWIFT_SNEAK_MIN_AMP.get(), CRUSHER_MAX_PROGRESS.get(), PRESS_MAX_PROGRESS.get(),
+                BARREL_MAX_PROGRESS.get(), BARREL_MAX_AGING_PROGRESS.get(), POT_MAX_PROGRESS.get(), POT_STILL_MAX_PROGRESS.get(),
+                COLUMN_STILL_2_MAX_PROGRESS.get(), COLUMN_STILL_4_MAX_PROGRESS.get(), COLUMN_STILL_6_MAX_PROGRESS.get(), COLUMN_STILL_8_MAX_PROGRESS.get());
     }
 }

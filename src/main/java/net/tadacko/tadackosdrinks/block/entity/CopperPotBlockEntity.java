@@ -33,18 +33,14 @@ import java.util.Map;
 
 public class CopperPotBlockEntity extends BlockEntity implements IFluidColorProvider {
     private int progress = 0;
-    private static final int MAX_PROGRESS = 2400 /*60*/; // 2 min
+    public static int potMaxProgress = 2400; // 2 min, fallback default, overridden by config value
 
     private final FluidTank fluidTank = new FluidTank(1000) {
         @Override
-        protected void onContentsChanged() {
-            setChanged();
-        }
+        protected void onContentsChanged() { setChanged(); }
 
         @Override
-        public boolean isFluidValid(FluidStack stack) {
-            return VALID_FLUIDS.contains(stack.getFluid());
-        }
+        public boolean isFluidValid(FluidStack stack) { return VALID_FLUIDS.contains(stack.getFluid()); }
     };
 
     private static final Map<Fluid, Fluid> BOILING_RESULTS = Map.ofEntries(
@@ -60,17 +56,13 @@ public class CopperPotBlockEntity extends BlockEntity implements IFluidColorProv
             .addAll(BOILING_RESULTS.values())
             .build();
 
-    public CopperPotBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.COPPER_POT.get(), pos, state);
-    }
+    public CopperPotBlockEntity(BlockPos pos, BlockState state) { super(ModBlockEntities.COPPER_POT.get(), pos, state); }
 
     private LazyOptional<IFluidHandler> lazyFluidHandler = LazyOptional.empty();
 
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
-        if (cap == ForgeCapabilities.FLUID_HANDLER) {
-            return lazyFluidHandler.cast();
-        }
+        if (cap == ForgeCapabilities.FLUID_HANDLER) return lazyFluidHandler.cast();
         return super.getCapability(cap, side);
     }
 
@@ -110,15 +102,11 @@ public class CopperPotBlockEntity extends BlockEntity implements IFluidColorProv
     }
 
     @Override
-    public void handleUpdateTag(CompoundTag tag) {
-        this.load(tag);
-    }
+    public void handleUpdateTag(CompoundTag tag) { this.load(tag); }
 
     @Nullable
     @Override
-    public ClientboundBlockEntityDataPacket getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    public ClientboundBlockEntityDataPacket getUpdatePacket() { return ClientboundBlockEntityDataPacket.create(this); }
 
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt) {
@@ -127,9 +115,7 @@ public class CopperPotBlockEntity extends BlockEntity implements IFluidColorProv
             this.load(tag);
 
             // Force re-render on client
-            if (level != null && level.isClientSide) {
-                level.sendBlockUpdated(this.getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
-            }
+            if (level != null && level.isClientSide) level.sendBlockUpdated(this.getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
     }
 
@@ -139,13 +125,8 @@ public class CopperPotBlockEntity extends BlockEntity implements IFluidColorProv
             FluidStack fluidStack = entity.fluidTank.getFluid();
             if (BOILING_RESULTS.containsValue(fluidStack.getFluid())) {
                 if (level.getGameTime() % 10 == 0) {
-                    level.addParticle(
-                            ParticleTypes.POOF,
-                            pos.getX() + 0.5,
-                            pos.getY() + 1.3,
-                            pos.getZ() + 0.5,
-                            0, 0.02, 0 // Particle movement
-                    );
+                    level.addParticle(ParticleTypes.POOF, pos.getX() + 0.5, pos.getY() + 1.3, pos.getZ() + 0.5, 0, 0.02,
+                            0);
                 }
             }
             return;
@@ -161,7 +142,7 @@ public class CopperPotBlockEntity extends BlockEntity implements IFluidColorProv
                 // Only send sendBlockUpdated when something visible changed
             }
 
-            if (entity.progress >= MAX_PROGRESS) {
+            if (entity.progress >= potMaxProgress) {
                 Fluid resultFluid = BOILING_RESULTS.get(fluidStack.getFluid());
 
                 if (resultFluid != null) {
@@ -188,9 +169,7 @@ public class CopperPotBlockEntity extends BlockEntity implements IFluidColorProv
             SoundEvent sound = wasDrained ? SoundEvents.BUCKET_FILL : SoundEvents.BUCKET_EMPTY;
             level.playSound(null, pos, sound, SoundSource.BLOCKS, 1.0F, 1.0F);
 
-            if (wasDrained) {
-                this.progress = 0;
-            }
+            if (wasDrained) this.progress = 0;
 
             level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
             setChanged(level, pos, state);
@@ -205,9 +184,7 @@ public class CopperPotBlockEntity extends BlockEntity implements IFluidColorProv
     }
 
     @Override
-    public FluidStack getFluid() {
-        return this.fluidTank.getFluid();
-    }
+    public FluidStack getFluid() { return this.fluidTank.getFluid(); }
 
     // returns a tag suitable for putting into an ItemStack under "BlockEntityTag"
     public CompoundTag saveToItemTag() {

@@ -52,20 +52,18 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
     private int sugarAmount = 0;
 
     private int progress = 0;
-    private static final int MAX_PROGRESS = 72000 /*60*/; // 1h
-    private static final int MAX_AGING_PROGRESS = 576000 /*60*/; // 8h
     public boolean isProcessing = false;
+
+    // fallback defaults, overridden by config values
+    public static int barrelMaxProgress = 72000; // 1h
+    public static int barrelMaxAgingProgress = 576000; // 8h
 
     private final FluidTank fluidTank = new FluidTank(1000) {
         @Override
-        protected void onContentsChanged() {
-            setChanged();
-        }
+        protected void onContentsChanged() { setChanged(); }
 
         @Override
-        public boolean isFluidValid(FluidStack stack) {
-            return VALID_FLUIDS.contains(stack.getFluid());
-        }
+        public boolean isFluidValid(FluidStack stack) { return VALID_FLUIDS.contains(stack.getFluid()); }
     };
 
     private static final Map<Fluid, Fluid> FERMENTING_RESULTS = Map.ofEntries(
@@ -128,18 +126,14 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
             .add(Fluids.WATER)
             .build();
 
-    public FermentingBarrelBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.FERMENTING_BARREL.get(), pos, state);
-    }
+    public FermentingBarrelBlockEntity(BlockPos pos, BlockState state) { super(ModBlockEntities.FERMENTING_BARREL.get(), pos, state); }
 
     private LazyOptional<IFluidHandler> lazyFluidHandler = LazyOptional.empty();
 
     // all the lazy fluid handler stuff is apparently about exposing the fluid tank to other block entities (automation, mod compatibility)
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
-        if (cap == ForgeCapabilities.FLUID_HANDLER) {
-            return lazyFluidHandler.cast();
-        }
+        if (cap == ForgeCapabilities.FLUID_HANDLER) return lazyFluidHandler.cast();
         return super.getCapability(cap, side);
     }
 
@@ -180,9 +174,8 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
         if (nbt.contains("clock") && level != null) {
             boolean clockState = nbt.getBoolean("clock");
             BlockState currentState = getBlockState();
-            if (currentState.hasProperty(FermentingBarrelBlock.CLOCK) && currentState.getValue(FermentingBarrelBlock.CLOCK) != clockState) {
+            if (currentState.hasProperty(FermentingBarrelBlock.CLOCK) && currentState.getValue(FermentingBarrelBlock.CLOCK) != clockState)
                 level.setBlock(worldPosition, currentState.setValue(FermentingBarrelBlock.CLOCK, clockState), 3);
-            }
         }
         fluidTank.readFromNBT(nbt);
     }
@@ -195,15 +188,11 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
     }
 
     @Override
-    public void handleUpdateTag(CompoundTag tag) {
-        this.load(tag);
-    }
+    public void handleUpdateTag(CompoundTag tag) { this.load(tag); }
 
     @Nullable
     @Override
-    public ClientboundBlockEntityDataPacket getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    public ClientboundBlockEntityDataPacket getUpdatePacket() { return ClientboundBlockEntityDataPacket.create(this); }
 
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt) {
@@ -212,9 +201,7 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
             this.load(tag);
 
             // Force re-render on client
-            if (level != null && level.isClientSide) {
-                level.sendBlockUpdated(this.getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
-            }
+            if (level != null && level.isClientSide) level.sendBlockUpdated(this.getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
     }
 
@@ -310,7 +297,7 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
 
                 syncClockIfNeeded(level, pos, state, entity);
 
-                if (entity.progress >= MAX_PROGRESS) {
+                if (entity.progress >= barrelMaxProgress) {
                     Fluid currentFluid = fluidStack.getFluid();
                     Fluid resultFluid = FERMENTING_RESULTS.get(currentFluid);
 
@@ -330,7 +317,7 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
 
                 syncClockIfNeeded(level, pos, state, entity);
 
-                if (entity.progress >= MAX_AGING_PROGRESS) {
+                if (entity.progress >= barrelMaxAgingProgress) {
                     Fluid currentFluid = fluidStack.getFluid();
                     Fluid resultFluid = AGING_RESULTS.get(currentFluid);
 
@@ -349,7 +336,7 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
 
                 syncClockIfNeeded(level, pos, state, entity);
 
-                if (entity.progress >= MAX_PROGRESS) {
+                if (entity.progress >= barrelMaxProgress) {
                     level.setBlock(pos, state.setValue(FermentingBarrelBlock.STATE, BarrelState.YEAST), 3);
 
                     // don't reset grain type, it's needed in handleRightClick
@@ -372,13 +359,9 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
         BlockState state = this.getBlockState();
 
         // Handle ingredient addition
-        if (heldItem.getItem() == ModItems.YEAST.get()) {
-            return addYeastClick(heldItem, player);
-        } else if (heldItem.getItem() == Items.WHEAT || heldItem.getItem() == ModItems.BARLEY.get()) {
-            return addGrainClick(heldItem, player);
-        } else if (heldItem.getItem() == Items.SUGAR) {
-            return addSugarClick(heldItem, player);
-        }
+        if (heldItem.getItem() == ModItems.YEAST.get()) return addYeastClick(heldItem, player);
+        else if (heldItem.getItem() == Items.WHEAT || heldItem.getItem() == ModItems.BARLEY.get()) return addGrainClick(heldItem, player);
+        else if (heldItem.getItem() == Items.SUGAR) return addSugarClick(heldItem, player);
 
         FluidStack fluidStack = this.fluidTank.getFluid();
 
@@ -388,16 +371,13 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
             if (filledGlassItem.isPresent()) {
                 if (!player.isCreative()) {
                     ItemStack filledGlass = new ItemStack(filledGlassItem.get());
-                    if (heldItem.getCount() == 1) {
-                        player.setItemInHand(hand, filledGlass);
-                    } else {
+                    if (heldItem.getCount() == 1) player.setItemInHand(hand, filledGlass);
+                    else {
                         heldItem.shrink(1);
 
                         // try to add glass to inventory, drop if full
                         boolean added = player.getInventory().add(filledGlass);
-                        if (!added) {
-                            player.drop(filledGlass, false);
-                        }
+                        if (!added) player.drop(filledGlass, false);
                     }
                 }
 
@@ -474,9 +454,8 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
         }
 
         // can't open barrel
-        if (heldItem.isEmpty() && state.getValue(FermentingBarrelBlock.STATE) == BarrelState.CLOSED && this.progress != 0) {
+        if (heldItem.isEmpty() && state.getValue(FermentingBarrelBlock.STATE) == BarrelState.CLOSED && this.progress != 0)
             player.displayClientMessage(Component.translatable("message.tadackosdrinks.fermenting_barrel_open_fail_progress"), true);
-        }
 
         return false;
     }
@@ -500,21 +479,13 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
     }
 
     @Override
-    public FluidStack getFluid() {
-        return this.fluidTank.getFluid();
-    }
+    public FluidStack getFluid() { return this.fluidTank.getFluid(); }
 
-    public int getProgress() {
-        return this.progress;
-    }
+    public int getProgress() { return this.progress; }
 
-    public int getMaxProgress() {
-        return MAX_PROGRESS;
-    }
+    public int getMaxProgress() { return barrelMaxProgress; }
 
-    public int getMaxAgingProgress() {
-        return MAX_AGING_PROGRESS;
-    }
+    public int getMaxAgingProgress() { return barrelMaxAgingProgress; }
 
     // returns a tag suitable for putting into an ItemStack under "BlockEntityTag"
     public CompoundTag saveToItemTag() {

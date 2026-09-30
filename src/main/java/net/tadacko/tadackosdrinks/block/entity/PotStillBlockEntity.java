@@ -38,20 +38,16 @@ import java.util.Set;
 public class PotStillBlockEntity extends BlockEntity implements IFluidColorProvider {
     public boolean isProcessing = false;
     private int progress = 0;
-    private static final int MAX_PROGRESS = 2400 /*60*/; // 2 min
+    public static int potStillMaxProgress = 2400; // 2 min, fallback default, overridden by config value
     private Direction condenserDir = null;
     private boolean cauldronPresent = false;
 
     private final FluidTank fluidTank = new FluidTank(3000) {
         @Override
-        protected void onContentsChanged() {
-            setChanged();
-        }
+        protected void onContentsChanged() { setChanged(); }
 
         @Override
-        public boolean isFluidValid(FluidStack stack) {
-            return VALID_FLUIDS.contains(stack.getFluid());
-        }
+        public boolean isFluidValid(FluidStack stack) { return VALID_FLUIDS.contains(stack.getFluid()); }
 
         @Override
         public int fill(FluidStack resource, FluidAction action) {
@@ -196,9 +192,7 @@ public class PotStillBlockEntity extends BlockEntity implements IFluidColorProvi
             Map.entry(ModFluids.CONCENTRATED_TEQUILA.source().get(), ModFluids.SPIRIT_AGAVE_HIGH.cauldron().get().defaultBlockState())
     );
 
-    private static final ImmutableSet<Fluid> VALID_FLUIDS = ImmutableSet.<Fluid>builder()
-            .addAll(DISTILLATION_RESULTS.keySet())
-            .build();
+    private static final ImmutableSet<Fluid> VALID_FLUIDS = ImmutableSet.<Fluid>builder().addAll(DISTILLATION_RESULTS.keySet()).build();
 
     public PotStillBlockEntity(BlockPos pPos, BlockState pBlockState) { super(ModBlockEntities.POT_STILL.get(), pPos, pBlockState); }
 
@@ -273,7 +267,6 @@ public class PotStillBlockEntity extends BlockEntity implements IFluidColorProvi
 
     public static void tick(Level level, BlockPos pos, BlockState state, PotStillBlockEntity entity) {
         // ticker server side only, no guard needed
-
         FluidStack fluidStack = entity.fluidTank.getFluid();
         Fluid currentFluid = fluidStack.getFluid();
 
@@ -293,7 +286,7 @@ public class PotStillBlockEntity extends BlockEntity implements IFluidColorProvi
                 return;
             }
 
-            if (entity.progress < MAX_PROGRESS) {
+            if (entity.progress < potStillMaxProgress) {
                 entity.progress++;
 
                 if (entity.progress % 20 == 0 && entity.getBlockState().getValue(PotStillBlock.CLOCK)) {
@@ -358,17 +351,11 @@ public class PotStillBlockEntity extends BlockEntity implements IFluidColorProvi
     }
 
     @Override
-    public FluidStack getFluid() {
-        return this.fluidTank.getFluid();
-    }
+    public FluidStack getFluid() { return this.fluidTank.getFluid(); }
 
-    public int getProgress() {
-        return this.progress;
-    }
+    public int getProgress() { return this.progress; }
 
-    public int getMaxProgress() {
-        return MAX_PROGRESS;
-    }
+    public int getMaxProgress() { return potStillMaxProgress; }
 
     // returns a tag suitable for putting into an ItemStack under "BlockEntityTag"
     public CompoundTag saveToItemTag() {

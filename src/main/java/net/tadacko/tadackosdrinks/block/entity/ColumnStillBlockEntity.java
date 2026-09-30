@@ -24,8 +24,8 @@ import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidUtil;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.templates.FluidTank;
-import net.tadacko.tadackosdrinks.block.CondenserPos;
 import net.tadacko.tadackosdrinks.block.ColumnStillBlock;
+import net.tadacko.tadackosdrinks.block.CondenserPos;
 import net.tadacko.tadackosdrinks.fluid.ModFluids;
 import net.tadacko.tadackosdrinks.util.IFluidColorProvider;
 import org.jetbrains.annotations.NotNull;
@@ -40,6 +40,12 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
     private int progress = 0;
     private ActiveCondenser activeCondenser = null;
     private boolean cauldronPresent = false;
+
+    // fallback defaults, overridden by config values
+    public static int columnStill2MaxProgress = 1200;
+    public static int columnStill4MaxProgress = 1200;
+    public static int columnStill6MaxProgress = 1600;
+    public static int columnStill8MaxProgress = 2400; // 2 min
 
     // Largest possible input requirement (height 8 tier) - the tank is always this big,
     // fill() below caps the *effective* capacity to whatever the current height's recipe needs.
@@ -387,12 +393,8 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
 
         int targetTierNumber = target.ordinal() + 1; // LOW=1, MID=2, HIGH=3, MAX=4
 
-        if (inputTier == 0) {
-            return 1500 * (1 << targetTierNumber);
-        }
-        if (inputTier >= targetTierNumber) {
-            return 0; // already at or past the target tier - nothing left to distill
-        }
+        if (inputTier == 0) return 1500 * (1 << targetTierNumber);
+        if (inputTier >= targetTierNumber) return 0; // already at or past the target tier - nothing left to distill
         return 1000 * (1 << (targetTierNumber - inputTier));
     }
 
@@ -409,11 +411,11 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
     /** Processing time in ticks by height. */
     private static int maxProgressFor(int height) {
         return switch (height) {
-            case 2 -> 1200 /*60*/;
-            case 4 -> 1200 /*60*/;
-            case 6 -> 1600 /*60*/;
-            case 8 -> 2400 /*60*/; // 2 min
-            default -> 1200;
+            case 2 -> columnStill2MaxProgress;
+            case 4 -> columnStill4MaxProgress;
+            case 6 -> columnStill6MaxProgress;
+            case 8 -> columnStill8MaxProgress;
+            default -> columnStill2MaxProgress;
         };
     }
 
@@ -425,22 +427,17 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
 
     private final FluidTank fluidTank = new FluidTank(MAX_TANK_CAPACITY) {
         @Override
-        protected void onContentsChanged() {
-            setChanged();
-        }
+        protected void onContentsChanged() { setChanged(); }
 
         @Override
-        public boolean isFluidValid(FluidStack stack) {
-            return FLUID_FAMILY.containsKey(stack.getFluid());
-        }
+        public boolean isFluidValid(FluidStack stack) { return FLUID_FAMILY.containsKey(stack.getFluid()); }
 
         @Override
         public int fill(FluidStack resource, FluidAction action) {
             // Cap the effective capacity to whatever this specific fluid's tier actually needs to
             // reach the current height's target tier (see requiredAmountFor's doc comment).
             int height = getBlockState().hasProperty(ColumnStillBlock.HEIGHT)
-                    ? getBlockState().getValue(ColumnStillBlock.HEIGHT)
-                    : ColumnStillBlock.MAX_HEIGHT;
+                    ? getBlockState().getValue(ColumnStillBlock.HEIGHT) : ColumnStillBlock.MAX_HEIGHT;
 
             Integer inputTier = FLUID_INPUT_TIER.get(resource.getFluid());
             int cap = inputTier == null ? MAX_TANK_CAPACITY : requiredAmountFor(inputTier, height);
@@ -626,27 +623,20 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
     }
 
     @Override
-    public FluidStack getFluid() {
-        return this.fluidTank.getFluid();
-    }
+    public FluidStack getFluid() { return this.fluidTank.getFluid(); }
 
     /** 0..1 fill ratio for rendering, relative to the current height's recipe capacity (or full tank if no recipe yet). */
     public float getFillPercent() {
         int height = getBlockState().hasProperty(ColumnStillBlock.HEIGHT)
-                ? getBlockState().getValue(ColumnStillBlock.HEIGHT)
-                : ColumnStillBlock.MAX_HEIGHT;
+                ? getBlockState().getValue(ColumnStillBlock.HEIGHT) : ColumnStillBlock.MAX_HEIGHT;
         int cap = requiredAmountFor(4, height);
         if (cap <= 0) cap = MAX_TANK_CAPACITY;
         return Math.min(1f, (float) fluidTank.getFluidAmount() / cap);
     }
 
-    public int getProgress() {
-        return this.progress;
-    }
+    public int getProgress() { return this.progress; }
 
-    public int getMaxProgress() {
-        return maxProgressFor(getBlockState().getValue(ColumnStillBlock.HEIGHT));
-    }
+    public int getMaxProgress() { return maxProgressFor(getBlockState().getValue(ColumnStillBlock.HEIGHT)); }
 
     public CompoundTag saveToItemTag() {
         CompoundTag tag = new CompoundTag();

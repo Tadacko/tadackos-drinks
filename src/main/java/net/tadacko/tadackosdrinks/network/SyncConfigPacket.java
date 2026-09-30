@@ -2,6 +2,7 @@ package net.tadacko.tadackosdrinks.network;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
+import net.tadacko.tadackosdrinks.block.entity.*;
 import net.tadacko.tadackosdrinks.effect.CharismaEffect;
 import net.tadacko.tadackosdrinks.effect.EruditionEffect;
 import net.tadacko.tadackosdrinks.effect.ImprovedDigestionEffect;
@@ -35,12 +36,22 @@ public class SyncConfigPacket {
     private final int eruditionMendingMinAmp;
     private final int eruditionSoulSpeedMinAmp;
     private final int eruditionSwiftSneakMinAmp;
+    private final int crusherMaxProgress;
+    private final int pressMaxProgress;
+    private final int barrelMaxProgress;
+    private final int barrelMaxAgingProgress;
+    private final int potMaxProgress;
+    private final int potStillMaxProgress;
+    private final int columnStill2MaxProgress;
+    private final int columnStill4MaxProgress;
+    private final int columnStill6MaxProgress;
+    private final int columnStill8MaxProgress;
 
     public SyncConfigPacket(double ABVBeer, double ABVWine, double ABVCider, double ABVMead, double ABVSpiritLow, double ABVSpiritMid,
                             double ABVSpiritHigh, double ABVSpiritMax, double ABVWhisky, double ABVBrandy, double ABVRum, double ABVVodka, double ABVGin,
                             double ABVTequila, float charismaMultiplier, int stackSizeMolasses, int stackSizeKeg, int stackSizeGlass, int stackSizeDrink,
                             boolean improvedDigestionAllowSprint, int eruditionFrostWalkerMinAmp, int eruditionMendingMinAmp, int eruditionSoulSpeedMinAmp,
-                            int eruditionSwiftSneakMinAmp) {
+                            int eruditionSwiftSneakMinAmp, int crusherMaxProgress, int pressMaxProgress, int barrelMaxProgress, int barrelMaxAgingProgress, int potMaxProgress, int potStillMaxProgress, int columnStill2MaxProgress, int columnStill4MaxProgress, int columnStill6MaxProgress, int columnStill8MaxProgress) {
         this.ABVBeer = ABVBeer;
         this.ABVWine = ABVWine;
         this.ABVCider = ABVCider;
@@ -65,6 +76,16 @@ public class SyncConfigPacket {
         this.eruditionMendingMinAmp = eruditionMendingMinAmp;
         this.eruditionSoulSpeedMinAmp = eruditionSoulSpeedMinAmp;
         this.eruditionSwiftSneakMinAmp = eruditionSwiftSneakMinAmp;
+        this.crusherMaxProgress = crusherMaxProgress;
+        this.pressMaxProgress = pressMaxProgress;
+        this.barrelMaxProgress = barrelMaxProgress;
+        this.barrelMaxAgingProgress = barrelMaxAgingProgress;
+        this.potMaxProgress = potMaxProgress;
+        this.potStillMaxProgress = potStillMaxProgress;
+        this.columnStill2MaxProgress = columnStill2MaxProgress;
+        this.columnStill4MaxProgress = columnStill4MaxProgress;
+        this.columnStill6MaxProgress = columnStill6MaxProgress;
+        this.columnStill8MaxProgress = columnStill8MaxProgress;
     }
 
     public static void encode(SyncConfigPacket pkt, FriendlyByteBuf buf) {
@@ -92,13 +113,23 @@ public class SyncConfigPacket {
         buf.writeInt(pkt.eruditionMendingMinAmp);
         buf.writeInt(pkt.eruditionSoulSpeedMinAmp);
         buf.writeInt(pkt.eruditionSwiftSneakMinAmp);
+        buf.writeInt(pkt.crusherMaxProgress);
+        buf.writeInt(pkt.pressMaxProgress);
+        buf.writeInt(pkt.barrelMaxProgress);
+        buf.writeInt(pkt.barrelMaxAgingProgress);
+        buf.writeInt(pkt.potMaxProgress);
+        buf.writeInt(pkt.potStillMaxProgress);
+        buf.writeInt(pkt.columnStill2MaxProgress);
+        buf.writeInt(pkt.columnStill4MaxProgress);
+        buf.writeInt(pkt.columnStill6MaxProgress);
+        buf.writeInt(pkt.columnStill8MaxProgress);
     }
 
     public static SyncConfigPacket decode(FriendlyByteBuf buf) {
         return new SyncConfigPacket(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(),
                 buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(),
                 buf.readFloat(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readBoolean(), buf.readInt(), buf.readInt(), buf.readInt(),
-                buf.readInt());
+                buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt());
     }
 
     public static void handle(final SyncConfigPacket packet, Supplier<NetworkEvent.Context> ctxSupplier) {
@@ -120,6 +151,16 @@ public class SyncConfigPacket {
             EruditionEffect.EruditionEventHandler.eruditionMendingMinAmp = packet.eruditionMendingMinAmp;
             EruditionEffect.EruditionEventHandler.eruditionSoulSpeedMinAmp = packet.eruditionSoulSpeedMinAmp;
             EruditionEffect.EruditionEventHandler.eruditionSwiftSneakMinAmp = packet.eruditionSwiftSneakMinAmp;
+            ManualCrusherBlockEntity.crusherMaxProgress = packet.crusherMaxProgress;
+            ManualPressBlockEntity.pressMaxProgress = packet.pressMaxProgress;
+            FermentingBarrelBlockEntity.barrelMaxProgress = packet.barrelMaxProgress;
+            FermentingBarrelBlockEntity.barrelMaxAgingProgress = packet.barrelMaxAgingProgress;
+            CopperPotBlockEntity.potMaxProgress = packet.potMaxProgress;
+            PotStillBlockEntity.potStillMaxProgress = packet.potStillMaxProgress;
+            ColumnStillBlockEntity.columnStill2MaxProgress = packet.columnStill2MaxProgress;
+            ColumnStillBlockEntity.columnStill4MaxProgress = packet.columnStill4MaxProgress;
+            ColumnStillBlockEntity.columnStill6MaxProgress = packet.columnStill6MaxProgress;
+            ColumnStillBlockEntity.columnStill8MaxProgress = packet.columnStill8MaxProgress;
         });
         ctx.setPacketHandled(true);
     }
