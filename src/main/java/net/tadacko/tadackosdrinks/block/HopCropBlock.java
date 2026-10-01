@@ -31,6 +31,8 @@ public class HopCropBlock extends CropBlock {
     public static final int SPREAD_AGE = 2;
     public static final int MAX_AGE = 3;
 
+    public static float hopGrowTime = 120f; // fallback default, overridden by config value
+
     private static final VoxelShape[] SHAPE_BY_AGE = new VoxelShape[] {
             Block.box(4.0D, 0.0D, 4.0D, 12.0D, 16.0D, 12.0D),
             Block.box(3.0D, 0.0D, 3.0D, 13.0D, 16.0D, 13.0D),
@@ -47,8 +49,7 @@ public class HopCropBlock extends CropBlock {
 
     public HopCropBlock(Properties pProperties) {
         super(pProperties);
-        this.registerDefaultState(this.stateDefinition.any()
-                .setValue(UNSUPPORTED, 0));
+        this.registerDefaultState(this.stateDefinition.any().setValue(UNSUPPORTED, 0));
     }
 
     @Override
@@ -89,12 +90,10 @@ public class HopCropBlock extends CropBlock {
         if (pLevel.getRawBrightness(pPos, 0) >= 9) {
             int currentAge = this.getAge(pState);
             float growthSpeed = getGrowthSpeed(this, pLevel, pPos);
-            if (ForgeHooks.onCropsGrowPre(pLevel, pPos, pState, pRandom.nextInt((int) (120.0F / growthSpeed) + 1) == 0)) {
-                if (currentAge >= SPREAD_AGE && pLevel.getBlockState(pPos.above()).is(ModBlocks.ROPE.get())) {
+            if (ForgeHooks.onCropsGrowPre(pLevel, pPos, pState, pRandom.nextInt((int) (hopGrowTime / growthSpeed) + 1) == 0)) {
+                if (currentAge >= SPREAD_AGE && pLevel.getBlockState(pPos.above()).is(ModBlocks.ROPE.get()))
                     pLevel.setBlock(pPos.above(), this.getStateForAge(0), 2);
-                } else if (currentAge < this.getMaxAge()) {
-                    pLevel.setBlock(pPos, this.getStateForAge(currentAge + 1), 2);
-                }
+                else if (currentAge < this.getMaxAge()) pLevel.setBlock(pPos, this.getStateForAge(currentAge + 1), 2);
                 ForgeHooks.onCropsGrowPost(pLevel, pPos, pState);
             }
         }
@@ -117,43 +116,30 @@ public class HopCropBlock extends CropBlock {
         int maxAge = this.getMaxAge();
         if (nextAge > maxAge) nextAge = maxAge;
 
-        if (this.getAge(pState) >= SPREAD_AGE && pLevel.getBlockState(pPos.above()).is(ModBlocks.ROPE.get())) {
+        if (this.getAge(pState) >= SPREAD_AGE && pLevel.getBlockState(pPos.above()).is(ModBlocks.ROPE.get()))
             pLevel.setBlock(pPos.above(), this.getStateForAge(0), 2);
-        } else {
-            pLevel.setBlock(pPos, this.getStateForAge(nextAge), 2);
-        }
+        else pLevel.setBlock(pPos, this.getStateForAge(nextAge), 2);
     }
 
     @Override
-    protected int getBonemealAgeIncrease(Level pLevel) {
-        return Mth.nextInt(pLevel.random, 1, 2);
-    }
+    protected int getBonemealAgeIncrease(Level pLevel) { return Mth.nextInt(pLevel.random, 1, 2); }
 
     @Override
-    public int getMaxAge() {
-        return MAX_AGE;
-    }
+    public int getMaxAge() { return MAX_AGE; }
 
     @Override
-    protected ItemLike getBaseSeedId() {
-        return ModItems.HOP_SEEDS.get();
-    }
+    protected ItemLike getBaseSeedId() { return ModItems.HOP_SEEDS.get(); }
 
     @Override
-    public IntegerProperty getAgeProperty() {
-        return AGE;
-    }
+    public IntegerProperty getAgeProperty() { return AGE; }
 
     @Override
     public boolean isValidBonemealTarget(LevelReader pLevel, BlockPos pPos, BlockState pState, boolean pIsClient) {
-        return !(this.isMaxAge(pState) && (pLevel.getBlockState(pPos.above()).is(this) ||
-                pLevel.getBlockState(pPos.above()).is(Blocks.AIR)));
+        return !(this.isMaxAge(pState) && (pLevel.getBlockState(pPos.above()).is(this) || pLevel.getBlockState(pPos.above()).is(Blocks.AIR)));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> pBuilder) {
-        pBuilder.add(AGE, UNSUPPORTED);
-    }
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> pBuilder) { pBuilder.add(AGE, UNSUPPORTED); }
 
     // onRemove + defer replacement to make it work in creative and drop stuff in survival
     @Override
@@ -186,10 +172,7 @@ public class HopCropBlock extends CropBlock {
         BlockState updated = state.setValue(UNSUPPORTED, next);
         level.setBlock(pos, updated, Block.UPDATE_ALL);
 
-        if (next == UNSUPPORTED_THRESHOLD) {
-            level.destroyBlock(pos, true);
-        } else {
-            level.scheduleTick(pos, this, CHECK_DELAY);
-        }
+        if (next == UNSUPPORTED_THRESHOLD) level.destroyBlock(pos, true);
+        else level.scheduleTick(pos, this, CHECK_DELAY);
     }
 }

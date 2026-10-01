@@ -36,6 +36,8 @@ public class JuniperBlock extends BushBlock implements BonemealableBlock {
     public static final IntegerProperty AGE = IntegerProperty.create("age", 0, 4);
     public static final EnumProperty<JuniperPart> PART = EnumProperty.create("part", JuniperPart.class);
 
+    public static int juniperGrowTime = 30; // fallback default, overridden by config value
+
     public JuniperBlock(Properties pProperties) {
         super(pProperties);
         this.registerDefaultState(this.stateDefinition.any().setValue(AGE, 0).setValue(PART, JuniperPart.BOTTOM));
@@ -51,15 +53,13 @@ public class JuniperBlock extends BushBlock implements BonemealableBlock {
     }
 
     // Only the bottom block drives growth for the whole column.
-    public boolean isRandomlyTicking(BlockState pState) {
-        return pState.getValue(PART) == JuniperPart.BOTTOM && pState.getValue(AGE) < MAX_AGE;
-    }
+    public boolean isRandomlyTicking(BlockState pState) { return pState.getValue(PART) == JuniperPart.BOTTOM && pState.getValue(AGE) < MAX_AGE; }
 
     public void randomTick(BlockState pState, ServerLevel pLevel, BlockPos pPos, RandomSource pRandom) {
         if (!pLevel.isAreaLoaded(pPos, 1)) return;
         int age = pState.getValue(AGE);
         if (age < MAX_AGE && pLevel.getRawBrightness(pPos.above(), 0) >= 9 &&
-                ForgeHooks.onCropsGrowPre(pLevel, pPos, pState, pRandom.nextInt(30) == 0)) { // 1/30 chance per random tick
+                ForgeHooks.onCropsGrowPre(pLevel, pPos, pState, pRandom.nextInt(juniperGrowTime) == 0)) { // 1/30 chance per random tick
             growColumn(pLevel, pPos, age + 1);
             ForgeHooks.onCropsGrowPost(pLevel, pPos, pState);
         }
@@ -68,9 +68,8 @@ public class JuniperBlock extends BushBlock implements BonemealableBlock {
     public InteractionResult use(BlockState pState, Level pLevel, BlockPos pPos, Player pPlayer, InteractionHand pHand, BlockHitResult pHit) {
         int age = pState.getValue(AGE);
         boolean maxAge = age == MAX_AGE;
-        if (!maxAge && pPlayer.getItemInHand(pHand).is(Items.BONE_MEAL)) {
-            return InteractionResult.PASS;
-        } else if (maxAge) {
+        if (!maxAge && pPlayer.getItemInHand(pHand).is(Items.BONE_MEAL)) return InteractionResult.PASS;
+        else if (maxAge) {
             if (!pLevel.isClientSide) {
                 int j = 2 + pLevel.random.nextInt(2); // 50% split 2 or 3
                 ItemStack drop = new ItemStack(ModItems.JUNIPER_BERRIES.get(), j);
@@ -87,14 +86,10 @@ public class JuniperBlock extends BushBlock implements BonemealableBlock {
             pLevel.playSound(null, pPos, SoundEvents.SWEET_BERRY_BUSH_PICK_BERRIES, SoundSource.BLOCKS, 1.0F, 0.8F +
                     pLevel.random.nextFloat() * 0.4F);
             return InteractionResult.sidedSuccess(pLevel.isClientSide);
-        } else {
-            return super.use(pState, pLevel, pPos, pPlayer, pHand, pHit);
-        }
+        } else return super.use(pState, pLevel, pPos, pPlayer, pHand, pHit);
     }
 
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> pBuilder) {
-        pBuilder.add(AGE, PART);
-    }
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> pBuilder) { pBuilder.add(AGE, PART); }
 
     @Override
     public boolean canSurvive(BlockState pState, LevelReader pLevel, BlockPos pPos) {
@@ -102,13 +97,9 @@ public class JuniperBlock extends BushBlock implements BonemealableBlock {
         return pLevel.getBlockState(pPos.below()).is(this);
     }
 
-    public boolean isValidBonemealTarget(LevelReader pLevel, BlockPos pPos, BlockState pState, boolean pIsClient) {
-        return pState.getValue(AGE) < MAX_AGE;
-    }
+    public boolean isValidBonemealTarget(LevelReader pLevel, BlockPos pPos, BlockState pState, boolean pIsClient) { return pState.getValue(AGE) < MAX_AGE; }
 
-    public boolean isBonemealSuccess(Level pLevel, RandomSource pRandom, BlockPos pPos, BlockState pState) {
-        return true;
-    }
+    public boolean isBonemealSuccess(Level pLevel, RandomSource pRandom, BlockPos pPos, BlockState pState) { return true; }
 
     public void performBonemeal(ServerLevel pLevel, RandomSource pRandom, BlockPos pPos, BlockState pState) {
         BlockPos basePos = getBasePos(pLevel, pPos);
@@ -151,13 +142,9 @@ public class JuniperBlock extends BushBlock implements BonemealableBlock {
             BlockState existing = pLevel.getBlockState(pos);
             JuniperPart part = partForIndex(i);
             BlockState newState;
-            if (existing.getBlock() == this) {
-                newState = existing.setValue(AGE, newAge).setValue(PART, part);
-            } else if (existing.canBeReplaced()) {
-                newState = this.defaultBlockState().setValue(AGE, newAge).setValue(PART, part);
-            } else {
-                break; // something is blocking growth upward
-            }
+            if (existing.getBlock() == this) newState = existing.setValue(AGE, newAge).setValue(PART, part);
+            else if (existing.canBeReplaced()) newState = this.defaultBlockState().setValue(AGE, newAge).setValue(PART, part);
+            else break; // something is blocking growth upward
             pLevel.setBlock(pos, newState, 2);
             pLevel.gameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Context.of(newState));
         }
@@ -166,9 +153,7 @@ public class JuniperBlock extends BushBlock implements BonemealableBlock {
     @Override
     public void onRemove(BlockState pState, Level pLevel, BlockPos pPos, BlockState pNewState, boolean pIsMoving) {
         // pNewState.getBlock() != this means the segment was actually removed, not just modified
-        if (!pLevel.isClientSide && pNewState.getBlock() != this) {
-            destroyColumnExcept(pLevel, pPos, pState);
-        }
+        if (!pLevel.isClientSide && pNewState.getBlock() != this) destroyColumnExcept(pLevel, pPos, pState);
         super.onRemove(pState, pLevel, pPos, pNewState, pIsMoving);
     }
 
@@ -182,9 +167,7 @@ public class JuniperBlock extends BushBlock implements BonemealableBlock {
         for (int i = 0; i < height; i++) {
             BlockPos segPos = basePos.above(i);
             if (segPos.equals(pPos)) continue;
-            if (pLevel.getBlockState(segPos).getBlock() == this) {
-                pLevel.destroyBlock(segPos, true);
-            }
+            if (pLevel.getBlockState(segPos).getBlock() == this) pLevel.destroyBlock(segPos, true);
         }
     }
 
@@ -208,18 +191,12 @@ public class JuniperBlock extends BushBlock implements BonemealableBlock {
 
         private final String name;
 
-        JuniperPart(String name) {
-            this.name = name;
-        }
+        JuniperPart(String name) { this.name = name; }
 
         @Override
-        public String getSerializedName() {
-            return name;
-        }
+        public String getSerializedName() { return name; }
 
         @Override
-        public String toString() {
-            return name;
-        }
+        public String toString() { return name; }
     }
 }

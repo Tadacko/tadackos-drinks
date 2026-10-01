@@ -7,7 +7,7 @@ import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import net.tadacko.tadackosdrinks.TadackosDrinks;
-import net.tadacko.tadackosdrinks.block.FermentingBarrelBlock;
+import net.tadacko.tadackosdrinks.block.*;
 import net.tadacko.tadackosdrinks.block.entity.client.FermentingBarrelRenderer;
 import net.tadacko.tadackosdrinks.block.entity.client.PlaceableDrinkwareRenderer;
 import net.tadacko.tadackosdrinks.effect.*;
@@ -52,6 +52,12 @@ public class ModCommonConfigs {
     public static final ForgeConfigSpec.IntValue COLUMN_STILL_4_MAX_PROGRESS;
     public static final ForgeConfigSpec.IntValue COLUMN_STILL_6_MAX_PROGRESS;
     public static final ForgeConfigSpec.IntValue COLUMN_STILL_8_MAX_PROGRESS;
+    public static final ForgeConfigSpec.DoubleValue HOP_GROW_TIME;
+    public static final ForgeConfigSpec.DoubleValue GRAPE_GROW_TIME;
+    public static final ForgeConfigSpec.IntValue GRAPE_SPREAD_TIME;
+    public static final ForgeConfigSpec.IntValue GRAPE_FRUIT_TIME;
+    public static final ForgeConfigSpec.IntValue JUNIPER_GROW_TIME;
+    public static final ForgeConfigSpec.IntValue AGAVE_GROW_TIME;
     public static final ForgeConfigSpec.DoubleValue ABV_BEER;
     public static final ForgeConfigSpec.DoubleValue ABV_WINE;
     public static final ForgeConfigSpec.DoubleValue ABV_CIDER;
@@ -146,6 +152,20 @@ public class ModCommonConfigs {
                 .defineInRange("columnStill6MaxProgress", 1600, 1, Integer.MAX_VALUE);
         COLUMN_STILL_8_MAX_PROGRESS = BUILDER.comment("How much time in ticks distillation takes in an 8 block tall Column Still (default 2400)")
                 .defineInRange("columnStill8MaxProgress", 2400, 1, Integer.MAX_VALUE);
+        HOP_GROW_TIME = BUILDER.comment("How many random ticks it takes on average for Hop crops to grow by 1 stage, divided by vanilla crop growth " +
+                        "speed (default 120)")
+                .defineInRange("hopGrowTime", 120, 0, Double.MAX_VALUE);
+        GRAPE_GROW_TIME = BUILDER.comment("How many random ticks it takes on average for Grape crops to grow by 1 stage, divided by vanilla crop growth " +
+                        "speed (default 120)")
+                .defineInRange("grapeGrowTime", 120, 0, Double.MAX_VALUE);
+        GRAPE_SPREAD_TIME = BUILDER.comment("How many random ticks it takes on average for Grape crops to spread sideways (default 10)")
+                .defineInRange("grapeSpreadTime", 10, 0, Integer.MAX_VALUE);
+        GRAPE_FRUIT_TIME = BUILDER.comment("How many random ticks it takes on average for Grape crops to fruit (default 20)")
+                .defineInRange("grapeFruitTime", 20, 0, Integer.MAX_VALUE);
+        JUNIPER_GROW_TIME = BUILDER.comment("How many random ticks it takes on average for Juniper to grow by 1 stage (default 30)")
+                .defineInRange("juniperGrowTime", 30, 0, Integer.MAX_VALUE);
+        AGAVE_GROW_TIME = BUILDER.comment("How many random ticks it takes on average for Agave to grow by 1 stage (default 80)")
+                .defineInRange("agaveGrowTime", 80, 0, Integer.MAX_VALUE);
         BUILDER.push("Drinks");
         ABV_BEER = BUILDER.comment("Alcohol by volume of Beer in decimal (default 0.05)")
                 .defineInRange("ABVBeer", 0.05, -Double.MAX_VALUE, Double.MAX_VALUE); // negative allowed, reverses effect?
@@ -289,6 +309,12 @@ public class ModCommonConfigs {
             if (!WaterInteractionHandler.throwMalting) WaterInteractionHandler.clearTracked();
             JoinHandler.firstLoginBook = FIRST_LOGIN_BOOK.get();
             BacUtils.BACEliminationRatePercentPerHour = BAC_ELIMINATION_RATE.get();
+            HopCropBlock.hopGrowTime = HOP_GROW_TIME.get().floatValue();
+            GrapeCropBlock.grapeGrowTime = GRAPE_GROW_TIME.get().floatValue();
+            GrapeCropBlock.grapeSpreadTime = GRAPE_SPREAD_TIME.get();
+            GrapeWireCropBlock.grapeFruitTime = GRAPE_FRUIT_TIME.get();
+            JuniperBlock.juniperGrowTime = JUNIPER_GROW_TIME.get();
+            AgaveBlock.agaveGrowTime = AGAVE_GROW_TIME.get();
             DrinkItem.ABVBeer = ABV_BEER.get();
             DrinkItem.ABVWine = ABV_WINE.get();
             DrinkItem.ABVCider = ABV_CIDER.get();

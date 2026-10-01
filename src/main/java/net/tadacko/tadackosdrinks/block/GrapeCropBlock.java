@@ -32,8 +32,9 @@ public class GrapeCropBlock extends CropBlock {
 
     public static final int MAX_AGE = 3;
 
-    // natural spread chance: 1 in SPREAD_TIME each eligible tick
-    public static final int SPREAD_TIME = 10;
+    // fallback defaults, overridden by config values
+    public static float grapeGrowTime = 120f;
+    public static int grapeSpreadTime = 10; // natural spread chance: 1 in SPREAD_TIME each eligible tick
 
     private final Supplier<Item> seedItem;
     private final Supplier<Block> wireCropVariant;
@@ -141,12 +142,12 @@ public class GrapeCropBlock extends CropBlock {
         int currentAge = this.getAge(pState);
 
         // side spread independent of upward spread
-        if (currentAge >= 1 && ForgeHooks.onCropsGrowPre(pLevel, pPos, pState, pRandom.nextInt(SPREAD_TIME) == 0))
+        if (currentAge >= 1 && ForgeHooks.onCropsGrowPre(pLevel, pPos, pState, pRandom.nextInt(grapeSpreadTime) == 0))
             if (attemptSideSpread(pLevel, pPos)) ForgeHooks.onCropsGrowPost(pLevel, pPos, pState);
 
         float growthSpeed = getGrowthSpeed(this, pLevel, pPos);
 
-        boolean growthHappens = pRandom.nextInt((int) (120.0F / growthSpeed) + 1) == 0;
+        boolean growthHappens = pRandom.nextInt((int) (grapeGrowTime / growthSpeed) + 1) == 0;
         if (!ForgeHooks.onCropsGrowPre(pLevel, pPos, pState, growthHappens)) return;
         if (!growthHappens) return;
 

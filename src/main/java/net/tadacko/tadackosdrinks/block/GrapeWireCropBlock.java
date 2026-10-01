@@ -10,7 +10,6 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -38,7 +37,7 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
     private static final VoxelShape SHAPE_NORTH_SOUTH = Block.box(4.0D, 4.0D, 0.0D, 12.0D, 12.0D, 16.0D);
     private static final VoxelShape SHAPE_EAST_WEST = Block.box(0.0D, 4.0D, 4.0D, 16.0D, 12.0D, 12.0D);
 
-    private static final int GRAPE_TIME = 20;
+    public static int grapeFruitTime = 20;  // fallback default, overridden by config value
 
     public static final IntegerProperty UNSUPPORTED = IntegerProperty.create("unsupported", 0, 2);
     // how many scheduled ticks without support before breaking
@@ -70,13 +69,13 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
 
         int age = state.getValue(AGE);
 
-        if (age == 0 && ForgeHooks.onCropsGrowPre(world, pos, state, random.nextInt(GRAPE_TIME) == 0)) {
+        if (age == 0 && ForgeHooks.onCropsGrowPre(world, pos, state, random.nextInt(grapeFruitTime) == 0)) {
             world.setBlock(pos, state.setValue(AGE, 1), Block.UPDATE_ALL);
             ForgeHooks.onCropsGrowPost(world, pos, state);
             return;
         }
 
-        if (!ForgeHooks.onCropsGrowPre(world, pos, state, random.nextInt(GrapeCropBlock.SPREAD_TIME) == 0)) return;
+        if (!ForgeHooks.onCropsGrowPre(world, pos, state, random.nextInt(GrapeCropBlock.grapeSpreadTime) == 0)) return;
 
         Direction facing = state.getValue(FACING);
         boolean spread = false;
