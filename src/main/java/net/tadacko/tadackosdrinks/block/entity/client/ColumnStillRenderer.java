@@ -20,7 +20,6 @@ import net.tadacko.tadackosdrinks.block.ColumnStillBlock;
 import net.tadacko.tadackosdrinks.block.entity.ColumnStillBlockEntity;
 
 public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlockEntity> {
-
     // Window bounds (local to a single segment, defined for default SOUTH facing, then rotated)
     private static final float WINDOW_MIN_X = 7f / 16f;
     private static final float WINDOW_MAX_X = 9f / 16f;
@@ -46,20 +45,16 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
     @Override
     public void render(ColumnStillBlockEntity blockEntity, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int combinedLight, int combinedOverlay) {
-
         BlockState state = blockEntity.getBlockState();
 
         // Guard: only the master (bottom, SEGMENT 0) renders the column. Without this, a stray
         // block entity left behind mid-merge (its cached state already updated to the new HEIGHT/
         // SEGMENT, but not yet removed by ColumnStillBlock#syncBlockEntities) would render a whole
         // extra column's worth of geometry starting from its own - now wrong - position.
-        if (state.hasProperty(ColumnStillBlock.SEGMENT) && state.getValue(ColumnStillBlock.SEGMENT) != 0) {
-            return;
-        }
+        if (state.hasProperty(ColumnStillBlock.SEGMENT) && state.getValue(ColumnStillBlock.SEGMENT) != 0) return;
 
         Direction facing = state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)
-                ? state.getValue(BlockStateProperties.HORIZONTAL_FACING)
-                : Direction.SOUTH;
+                ? state.getValue(BlockStateProperties.HORIZONTAL_FACING) : Direction.SOUTH;
         int height = state.hasProperty(ColumnStillBlock.HEIGHT) ? state.getValue(ColumnStillBlock.HEIGHT) : 1;
 
         FluidStack fluid = blockEntity.getFluid();
@@ -68,9 +63,7 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
 
         if (!fluid.isEmpty()) {
             var fluidExt = IClientFluidTypeExtensions.of(fluid.getFluid());
-            fluidSprite = Minecraft.getInstance()
-                    .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                    .apply(fluidExt.getStillTexture());
+            fluidSprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(fluidExt.getStillTexture());
 
             int color = fluidExt.getTintColor(fluid);
             fr = ((color >> 16) & 0xFF) / 255f;
@@ -81,9 +74,7 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
 
         float pct = blockEntity.getFillPercent();
 
-        TextureAtlasSprite glassSprite = Minecraft.getInstance()
-                .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                .apply(GLASS_TEXTURE);
+        TextureAtlasSprite glassSprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(GLASS_TEXTURE);
 
         for (int i = 0; i < height; i++) {
             boolean isBottom = i == 0;
@@ -120,17 +111,15 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
             PoseStack.Pose pose = poseStack.last();
 
             if (fluidSprite != null) {
-                VertexConsumer fluidConsumer = FermentingBarrelRenderer.fluidTranslucent ? bufferSource.getBuffer(RenderType.translucent()) :
-                        bufferSource.getBuffer(RenderType.solid());
+                VertexConsumer fluidConsumer = FermentingBarrelRenderer.fluidTranslucent ?
+                        bufferSource.getBuffer(RenderType.translucent()) : bufferSource.getBuffer(RenderType.solid());
 
                 if (showLower) {
-                    renderFluidForWindow(fluidConsumer, pose, fluidSprite,
-                            LOWER_WINDOW_MIN_Y, LOWER_WINDOW_MAX_Y, pct,
+                    renderFluidForWindow(fluidConsumer, pose, fluidSprite, LOWER_WINDOW_MIN_Y, LOWER_WINDOW_MAX_Y, pct,
                             fr, fg, fb, fa, combinedLight, combinedOverlay);
                 }
                 if (showUpper) {
-                    renderFluidForWindow(fluidConsumer, pose, fluidSprite,
-                            UPPER_WINDOW_MIN_Y, UPPER_WINDOW_MAX_Y, pct,
+                    renderFluidForWindow(fluidConsumer, pose, fluidSprite, UPPER_WINDOW_MIN_Y, UPPER_WINDOW_MAX_Y, pct,
                             fr, fg, fb, fa, combinedLight, combinedOverlay);
                 }
             }
@@ -138,13 +127,11 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
             VertexConsumer glassConsumer = bufferSource.getBuffer(RenderType.translucent());
 
             if (showLower) {
-                renderGlassQuad(glassConsumer, pose, glassSprite,
-                        WINDOW_MIN_X, LOWER_WINDOW_MIN_Y, WINDOW_MAX_X, LOWER_WINDOW_MAX_Y, WINDOW_Z,
+                renderGlassQuad(glassConsumer, pose, glassSprite, WINDOW_MIN_X, LOWER_WINDOW_MIN_Y, WINDOW_MAX_X, LOWER_WINDOW_MAX_Y, WINDOW_Z,
                         combinedLight, combinedOverlay);
             }
             if (showUpper) {
-                renderGlassQuad(glassConsumer, pose, glassSprite,
-                        WINDOW_MIN_X, UPPER_WINDOW_MIN_Y, WINDOW_MAX_X, UPPER_WINDOW_MAX_Y, WINDOW_Z,
+                renderGlassQuad(glassConsumer, pose, glassSprite, WINDOW_MIN_X, UPPER_WINDOW_MIN_Y, WINDOW_MAX_X, UPPER_WINDOW_MAX_Y, WINDOW_Z,
                         combinedLight, combinedOverlay);
             }
 
@@ -152,45 +139,36 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
         }
 
         // Clock is only meaningful on the bottom segment - render once at the BE's own (untranslated) pose
-        if (state.hasProperty(ColumnStillBlock.CLOCK) && state.getValue(ColumnStillBlock.CLOCK)) {
+        if (state.hasProperty(ColumnStillBlock.CLOCK) && state.getValue(ColumnStillBlock.CLOCK))
             renderClockHand(blockEntity, poseStack, bufferSource, combinedLight, combinedOverlay);
-        }
     }
 
     @Override
-    public int getViewDistance() {
-        return 128;
-    }
+    public int getViewDistance() { return 128; }
 
     /** Front gauge quad plus its two perpendicular surface caps, all at the window's current fill height. */
     private void renderFluidForWindow(VertexConsumer consumer, PoseStack.Pose pose, TextureAtlasSprite sprite,
-                                      float windowMinY, float windowMaxY, float pct,
-                                      float red, float green, float blue, float alpha,
+                                      float windowMinY, float windowMaxY, float pct, float red, float green, float blue, float alpha,
                                       int combinedLight, int combinedOverlay) {
-
         float fillY = windowMinY + pct * (windowMaxY - windowMinY);
         if (fillY <= windowMinY) return; // empty - nothing to draw for this window
 
         // Vertical gauge, front-facing, behind the glass
-        renderFluidQuad(consumer, pose, sprite,
-                WINDOW_MIN_X, windowMinY, WINDOW_MAX_X, fillY, FLUID_Z,
+        renderFluidQuad(consumer, pose, sprite, WINDOW_MIN_X, windowMinY, WINDOW_MAX_X, fillY, FLUID_Z,
                 red, green, blue, alpha, combinedLight, combinedOverlay);
 
         // Surface cap 1: narrow, right behind the gauge (matches window width)
-        FermentingBarrelRenderer.renderFluidQuad(consumer, pose, sprite,
-                WINDOW_MIN_X, fillY, SURFACE_NEAR_MIN_Z, WINDOW_MAX_X, SURFACE_NEAR_MAX_Z,
+        FermentingBarrelRenderer.renderFluidQuad(consumer, pose, sprite, WINDOW_MIN_X, fillY, SURFACE_NEAR_MIN_Z, WINDOW_MAX_X, SURFACE_NEAR_MAX_Z,
                 red, green, blue, alpha, combinedLight, combinedOverlay);
 
         // Surface cap 2: wide, representing the full interior tube cross-section
-        FermentingBarrelRenderer.renderFluidQuad(consumer, pose, sprite,
-                SURFACE_FAR_MIN_X, fillY, SURFACE_FAR_MIN_Z, SURFACE_FAR_MAX_X, SURFACE_FAR_MAX_Z,
+        FermentingBarrelRenderer.renderFluidQuad(consumer, pose, sprite, SURFACE_FAR_MIN_X, fillY, SURFACE_FAR_MIN_Z, SURFACE_FAR_MAX_X, SURFACE_FAR_MAX_Z,
                 red, green, blue, alpha, combinedLight, combinedOverlay);
     }
 
     /** Glass window: fixed tiny interior UV sample (u1-2, v1-2), matching the pot still's convention. */
     private void renderGlassQuad(VertexConsumer consumer, PoseStack.Pose pose, TextureAtlasSprite sprite,
-                                 float minX, float minY, float maxX, float maxY, float z,
-                                 int combinedLight, int combinedOverlay) {
+                                 float minX, float minY, float maxX, float maxY, float z, int combinedLight, int combinedOverlay) {
         float u0 = sprite.getU(1);
         float u1 = sprite.getU(2);
         float v0 = sprite.getV(1);
@@ -201,8 +179,7 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
 
     /** Vertical fluid gauge: UV proportional to quad size, same convention as the pot still's fluid quad. */
     private void renderFluidQuad(VertexConsumer consumer, PoseStack.Pose pose, TextureAtlasSprite sprite,
-                                 float minX, float minY, float maxX, float maxY, float z,
-                                 float red, float green, float blue, float alpha,
+                                 float minX, float minY, float maxX, float maxY, float z, float red, float green, float blue, float alpha,
                                  int combinedLight, int combinedOverlay) {
         float uSize = (maxX - minX) * 16f;
         float vSize = (maxY - minY) * 16f;
@@ -210,61 +187,48 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
         float u1 = sprite.getU(uSize);
         float v0 = sprite.getV(0);
         float v1 = sprite.getV(vSize);
-        renderDoubleSidedQuad(consumer, pose, minX, minY, maxX, maxY, z, u0, u1, v0, v1,
-                red, green, blue, alpha, combinedLight, combinedOverlay);
+        renderDoubleSidedQuad(consumer, pose, minX, minY, maxX, maxY, z, u0, u1, v0, v1, red, green, blue, alpha, combinedLight, combinedOverlay);
     }
 
     /**
      * Flat quad rendered with both windings/normals (0,0,-1) and (0,0,1) so it isn't back-face culled
      * by RenderType.translucent() regardless of which side of the block the camera is on.
      */
-    private void renderDoubleSidedQuad(VertexConsumer consumer, PoseStack.Pose pose,
-                                       float minX, float minY, float maxX, float maxY, float z,
-                                       float u0, float u1, float v0, float v1,
-                                       float red, float green, float blue, float alpha,
+    private void renderDoubleSidedQuad(VertexConsumer consumer, PoseStack.Pose pose, float minX, float minY, float maxX, float maxY, float z,
+                                       float u0, float u1, float v0, float v1, float red, float green, float blue, float alpha,
                                        int combinedLight, int combinedOverlay) {
 
         // Winding A -> normal (0,0,-1)
-        consumer.vertex(pose.pose(), minX, minY, z).color(red, green, blue, alpha)
-                .uv(u0, v1).overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0, 0, -1).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, z).color(red, green, blue, alpha)
-                .uv(u1, v1).overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0, 0, -1).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, z).color(red, green, blue, alpha)
-                .uv(u1, v0).overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0, 0, -1).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, z).color(red, green, blue, alpha)
-                .uv(u0, v0).overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0, 0, -1).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, z).color(red, green, blue, alpha).uv(u0, v1).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0, 0, -1).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, z).color(red, green, blue, alpha).uv(u1, v1).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0, 0, -1).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, z).color(red, green, blue, alpha).uv(u1, v0).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0, 0, -1).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, z).color(red, green, blue, alpha).uv(u0, v0).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0, 0, -1).endVertex();
 
         // Winding B (reversed) -> normal (0,0,1)
-        consumer.vertex(pose.pose(), minX, maxY, z).color(red, green, blue, alpha)
-                .uv(u0, v0).overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0, 0, 1).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, z).color(red, green, blue, alpha)
-                .uv(u1, v0).overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0, 0, 1).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, z).color(red, green, blue, alpha)
-                .uv(u1, v1).overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0, 0, 1).endVertex();
-        consumer.vertex(pose.pose(), minX, minY, z).color(red, green, blue, alpha)
-                .uv(u0, v1).overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0, 0, 1).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, z).color(red, green, blue, alpha).uv(u0, v0).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0, 0, 1).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, z).color(red, green, blue, alpha).uv(u1, v0).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0, 0, 1).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, z).color(red, green, blue, alpha).uv(u1, v1).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0, 0, 1).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, z).color(red, green, blue, alpha).uv(u0, v1).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0, 0, 1).endVertex();
     }
 
     // --- CLOCK HAND (copied from PotStillRenderer) ---
     private void renderClockHand(ColumnStillBlockEntity blockEntity, PoseStack poseStack,
                                  MultiBufferSource bufferSource, int combinedLight, int combinedOverlay) {
-
         final float basePivotX = 8f / 16f;
         final float basePivotY = 4f / 16f;
         final float basePivotZ = 1.25f / 16f;
 
         BlockState state = blockEntity.getBlockState();
         Direction facing = state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)
-                ? state.getValue(BlockStateProperties.HORIZONTAL_FACING)
-                : Direction.SOUTH;
+                ? state.getValue(BlockStateProperties.HORIZONTAL_FACING) : Direction.SOUTH;
 
         final float centerX = 8f / 16f;
         final float centerZ = 8f / 16f;
@@ -319,10 +283,13 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
         poseStack.translate(-sizeX / 2f, -0.5f / 16f, -sizeZ / 2f);
 
         VertexConsumer consumer = bufferSource.getBuffer(RenderType.solid());
-        float r = 215 / 255f, g = 0f, b = 0f, a = 1f;
+        float r = 205 / 255f, g = 0f, b = 0f, a = 1f;
+        switch (facing) {
+            case NORTH, SOUTH -> r = 0.8f * r;
+            case EAST, WEST   -> r = 0.7f * r; // should be 0.6 but looks wrong so idk
+        }
 
-        TextureAtlasSprite white = Minecraft.getInstance()
-                .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
+        TextureAtlasSprite white = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
                 .apply(new ResourceLocation("minecraft", "block/white_concrete"));
 
         PoseStack.Pose pose = poseStack.last();
@@ -334,112 +301,64 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
         float vSize = (maxZ - minZ) * 16f;
 
         // Front
-        consumer.vertex(pose.pose(), minX, minY, maxZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,1).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,1).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,1).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,1).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, maxZ).color(r,g,b,a).uv(white.getU(0f), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,1).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(r,g,b,a).uv(white.getU(uSize), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,1).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(r,g,b,a).uv(white.getU(uSize), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,1).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(r,g,b,a).uv(white.getU(0f), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,1).endVertex();
 
         // Back
-        consumer.vertex(pose.pose(), maxX, minY, minZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,-1).endVertex();
-        consumer.vertex(pose.pose(), minX, minY, minZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,-1).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, minZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,-1).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,-1).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, minZ).color(r,g,b,a).uv(white.getU(0f), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,-1).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, minZ).color(r,g,b,a).uv(white.getU(uSize), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,-1).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, minZ).color(r,g,b,a).uv(white.getU(uSize), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,-1).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(r,g,b,a).uv(white.getU(0f), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,-1).endVertex();
 
         // Left
-        consumer.vertex(pose.pose(), minX, minY, minZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), -1,0,0).endVertex();
-        consumer.vertex(pose.pose(), minX, minY, maxZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), -1,0,0).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), -1,0,0).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, minZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), -1,0,0).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, minZ).color(0.9f * r,g,b,a).uv(white.getU(0f), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), -1,0,0).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, maxZ).color(0.9f * r,g,b,a).uv(white.getU(uSize), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), -1,0,0).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(0.9f * r,g,b,a).uv(white.getU(uSize), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), -1,0,0).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, minZ).color(0.9f * r,g,b,a).uv(white.getU(0f), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), -1,0,0).endVertex();
 
         // Right
-        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 1,0,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, minZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 1,0,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 1,0,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 1,0,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(0.9f * r,g,b,a).uv(white.getU(0f), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 1,0,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, minZ).color(0.9f * r,g,b,a).uv(white.getU(uSize), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 1,0,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(0.9f * r,g,b,a).uv(white.getU(uSize), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 1,0,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(0.9f * r,g,b,a).uv(white.getU(0f), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 1,0,0).endVertex();
 
         // Top
-        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,1,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,1,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,1,0).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, minZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,1,0).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(0.8f * r,g,b,a).uv(white.getU(0f), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,1,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(0.8f * r,g,b,a).uv(white.getU(uSize), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,1,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(0.8f * r,g,b,a).uv(white.getU(uSize), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,1,0).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, minZ).color(0.8f * r,g,b,a).uv(white.getU(0f), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,1,0).endVertex();
 
         // Bottom
-        consumer.vertex(pose.pose(), minX, minY, minZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,-1,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, minZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,-1,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,-1,0).endVertex();
-        consumer.vertex(pose.pose(), minX, minY, maxZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,-1,0).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, minZ).color(0.8f * r,g,b,a).uv(white.getU(0f), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,-1,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, minZ).color(0.8f * r,g,b,a).uv(white.getU(uSize), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,-1,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(0.8f * r,g,b,a).uv(white.getU(uSize), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,-1,0).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, maxZ).color(0.8f * r,g,b,a).uv(white.getU(0f), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,-1,0).endVertex();
 
         poseStack.popPose();
     }

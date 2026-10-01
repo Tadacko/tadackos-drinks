@@ -29,7 +29,6 @@ public class PotStillRenderer implements BlockEntityRenderer<PotStillBlockEntity
     @Override
     public void render(PotStillBlockEntity blockEntity, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int combinedLight, int combinedOverlay) {
-
         FluidStack fluid = blockEntity.getFluid();
 
         TextureAtlasSprite sprite = null;
@@ -37,9 +36,7 @@ public class PotStillRenderer implements BlockEntityRenderer<PotStillBlockEntity
 
         if (!fluid.isEmpty()) {
             var fluidExt = IClientFluidTypeExtensions.of(fluid.getFluid());
-            sprite = Minecraft.getInstance()
-                    .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                    .apply(fluidExt.getStillTexture());
+            sprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(fluidExt.getStillTexture());
 
             int color = fluidExt.getTintColor(fluid);
             red   = ((color >> 16) & 0xFF) / 255f;
@@ -62,18 +59,13 @@ public class PotStillRenderer implements BlockEntityRenderer<PotStillBlockEntity
             VertexConsumer consumer = FermentingBarrelRenderer.fluidTranslucent ? bufferSource.getBuffer(RenderType.translucent()) :
                     bufferSource.getBuffer(RenderType.solid());
 
-            FermentingBarrelRenderer.renderFluidQuad(consumer, poseStack.last(), sprite,
-                    3/16f, fluidHeight, 3/16f,
-                    13/16f, 13/16f,
-                    red, green, blue, alpha,
-                    combinedLight, combinedOverlay);
+            FermentingBarrelRenderer.renderFluidQuad(consumer, poseStack.last(), sprite, 3/16f, fluidHeight, 3/16f, 13/16f, 13/16f,
+                    red, green, blue, alpha, combinedLight, combinedOverlay);
         }
 
         renderGlassWindow(blockEntity, poseStack, bufferSource, combinedLight, combinedOverlay);
 
-        if (blockEntity.getBlockState().getValue(PotStillBlock.CLOCK)) {
-            renderClockHand(blockEntity, poseStack, bufferSource, combinedLight, combinedOverlay);
-        }
+        if (blockEntity.getBlockState().getValue(PotStillBlock.CLOCK)) renderClockHand(blockEntity, poseStack, bufferSource, combinedLight, combinedOverlay);
 
         poseStack.popPose();
     }
@@ -81,7 +73,6 @@ public class PotStillRenderer implements BlockEntityRenderer<PotStillBlockEntity
     // --- CLOCK HAND (simplified: no aging logic) ---
     private void renderClockHand(PotStillBlockEntity blockEntity, PoseStack poseStack,
                                  MultiBufferSource bufferSource, int combinedLight, int combinedOverlay) {
-
         // --- PIVOT (front of block) ---
         final float basePivotX = 8f / 16f;
         final float basePivotY = 4f / 16f;
@@ -89,8 +80,7 @@ public class PotStillRenderer implements BlockEntityRenderer<PotStillBlockEntity
 
         BlockState state = blockEntity.getBlockState();
         Direction facing = state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)
-                ? state.getValue(BlockStateProperties.HORIZONTAL_FACING)
-                : Direction.SOUTH;
+                ? state.getValue(BlockStateProperties.HORIZONTAL_FACING) : Direction.SOUTH;
 
         // --- ROTATE PIVOT TO MATCH FACING ---
         final float centerX = 8f / 16f;
@@ -154,10 +144,13 @@ public class PotStillRenderer implements BlockEntityRenderer<PotStillBlockEntity
         poseStack.translate(-sizeX / 2f, -0.5f / 16f, -sizeZ / 2f);
 
         VertexConsumer consumer = bufferSource.getBuffer(RenderType.solid());
-        float r = 215 / 255f, g = 0f, b = 0f, a = 1f;
+        float r = 205 / 255f, g = 0f, b = 0f, a = 1f;
+        switch (facing) {
+            case NORTH, SOUTH -> r = 0.8f * r;
+            case EAST, WEST   -> r = 0.7f * r; // should be 0.6 but looks wrong so idk
+        }
 
-        TextureAtlasSprite white = Minecraft.getInstance()
-                .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
+        TextureAtlasSprite white = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
                 .apply(new ResourceLocation("minecraft", "block/white_concrete"));
 
         PoseStack.Pose pose = poseStack.last();
@@ -170,119 +163,70 @@ public class PotStillRenderer implements BlockEntityRenderer<PotStillBlockEntity
 
         // --- ALL 6 FACES (unchanged) ---
         // Front
-        consumer.vertex(pose.pose(), minX, minY, maxZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,1).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,1).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,1).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,1).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, maxZ).color(r,g,b,a).uv(white.getU(0f), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,1).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(r,g,b,a).uv(white.getU(uSize), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,1).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(r,g,b,a).uv(white.getU(uSize), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,1).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(r,g,b,a).uv(white.getU(0f), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,1).endVertex();
 
         // Back
-        consumer.vertex(pose.pose(), maxX, minY, minZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,-1).endVertex();
-        consumer.vertex(pose.pose(), minX, minY, minZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,-1).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, minZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,-1).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,-1).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, minZ).color(r,g,b,a).uv(white.getU(0f), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,-1).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, minZ).color(r,g,b,a).uv(white.getU(uSize), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,-1).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, minZ).color(r,g,b,a).uv(white.getU(uSize), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,-1).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(r,g,b,a).uv(white.getU(0f), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,0,-1).endVertex();
 
         // Left
-        consumer.vertex(pose.pose(), minX, minY, minZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), -1,0,0).endVertex();
-        consumer.vertex(pose.pose(), minX, minY, maxZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), -1,0,0).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), -1,0,0).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, minZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), -1,0,0).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, minZ).color(0.9f * r,g,b,a).uv(white.getU(0f), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), -1,0,0).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, maxZ).color(0.9f * r,g,b,a).uv(white.getU(uSize), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), -1,0,0).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(0.9f * r,g,b,a).uv(white.getU(uSize), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), -1,0,0).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, minZ).color(0.9f * r,g,b,a).uv(white.getU(0f), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), -1,0,0).endVertex();
 
         // Right
-        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 1,0,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, minZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 1,0,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 1,0,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 1,0,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(0.9f * r,g,b,a).uv(white.getU(0f), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 1,0,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, minZ).color(0.9f * r,g,b,a).uv(white.getU(uSize), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 1,0,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(0.9f * r,g,b,a).uv(white.getU(uSize), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 1,0,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(0.9f * r,g,b,a).uv(white.getU(0f), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 1,0,0).endVertex();
 
         // Top
-        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,1,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,1,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,1,0).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, minZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,1,0).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(0.8f * r,g,b,a).uv(white.getU(0f), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,1,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(0.8f * r,g,b,a).uv(white.getU(uSize), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,1,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(0.8f * r,g,b,a).uv(white.getU(uSize), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,1,0).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, minZ).color(0.8f * r,g,b,a).uv(white.getU(0f), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,1,0).endVertex();
 
         // Bottom
-        consumer.vertex(pose.pose(), minX, minY, minZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,-1,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, minZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(0f))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,-1,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(r,g,b,a)
-                .uv(white.getU(uSize), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,-1,0).endVertex();
-        consumer.vertex(pose.pose(), minX, minY, maxZ).color(r,g,b,a)
-                .uv(white.getU(0f), white.getV(vSize))
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,-1,0).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, minZ).color(0.8f * r,g,b,a).uv(white.getU(0f), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,-1,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, minZ).color(0.8f * r,g,b,a).uv(white.getU(uSize), white.getV(0f))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,-1,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(0.8f * r,g,b,a).uv(white.getU(uSize), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,-1,0).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, maxZ).color(0.8f * r,g,b,a).uv(white.getU(0f), white.getV(vSize))
+                .overlayCoords(combinedOverlay).uv2(combinedLight).normal(pose.normal(), 0,-1,0).endVertex();
 
         poseStack.popPose();
     }
 
     private void renderGlassWindow(PotStillBlockEntity blockEntity, PoseStack poseStack,
                                    MultiBufferSource bufferSource, int combinedLight, int combinedOverlay) {
-
         // --- bounds ---
         float minX = 7f / 16f;
         float maxX = 9f / 16f;
@@ -291,8 +235,7 @@ public class PotStillRenderer implements BlockEntityRenderer<PotStillBlockEntity
         float minZ = 4f / 16f;
         float maxZ = 5f / 16f;
 
-        TextureAtlasSprite sprite = Minecraft.getInstance()
-                .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
+        TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
                 .apply(new ResourceLocation("minecraft", "block/light_blue_stained_glass"));
 
         float u0 = sprite.getU(1);
@@ -332,60 +275,44 @@ public class PotStillRenderer implements BlockEntityRenderer<PotStillBlockEntity
         float r = 1f, g = 1f, b = 1f, a = 1f;
 
         // --- NORTH ---
-        consumer.vertex(pose.pose(), minX, minY, minZ).color(r,g,b,a).uv(u0,v1)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,-1).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, minZ).color(r,g,b,a).uv(u1,v1)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,-1).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(r,g,b,a).uv(u1,v0)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,-1).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, minZ).color(r,g,b,a).uv(u0,v0)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,-1).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, minZ).color(r,g,b,a).uv(u0,v1).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,0,-1).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, minZ).color(r,g,b,a).uv(u1,v1).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,0,-1).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(r,g,b,a).uv(u1,v0).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,0,-1).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, minZ).color(r,g,b,a).uv(u0,v0).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,0,-1).endVertex();
 
         // --- SOUTH ---
-        consumer.vertex(pose.pose(), minX, minY, maxZ).color(r,g,b,a).uv(u0,v1)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,1).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(r,g,b,a).uv(u0,v0)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,1).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(r,g,b,a).uv(u1,v0)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,1).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(r,g,b,a).uv(u1,v1)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,0,1).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, maxZ).color(r,g,b,a).uv(u0,v1).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,0,1).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(r,g,b,a).uv(u0,v0).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,0,1).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(r,g,b,a).uv(u1,v0).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,0,1).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(r,g,b,a).uv(u1,v1).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,0,1).endVertex();
 
         // --- TOP ---
-        consumer.vertex(pose.pose(), minX, maxY, minZ).color(r,g,b,a).uv(u0,v1)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,1,0).endVertex();
-        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(r,g,b,a).uv(u0,v0)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,1,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(r,g,b,a).uv(u1,v0)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,1,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(r,g,b,a).uv(u1,v1)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,1,0).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, minZ).color(r,g,b,a).uv(u0,v1).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,1,0).endVertex();
+        consumer.vertex(pose.pose(), minX, maxY, maxZ).color(r,g,b,a).uv(u0,v0).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,1,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, maxZ).color(r,g,b,a).uv(u1,v0).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,1,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, maxY, minZ).color(r,g,b,a).uv(u1,v1).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,1,0).endVertex();
 
         // --- BOTTOM ---
-        consumer.vertex(pose.pose(), minX, minY, minZ).color(r,g,b,a).uv(u0,v1)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,-1,0).endVertex();
-        consumer.vertex(pose.pose(), minX, minY, maxZ).color(r,g,b,a).uv(u0,v0)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,-1,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(r,g,b,a).uv(u1,v0)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,-1,0).endVertex();
-        consumer.vertex(pose.pose(), maxX, minY, minZ).color(r,g,b,a).uv(u1,v1)
-                .overlayCoords(combinedOverlay).uv2(combinedLight)
-                .normal(pose.normal(), 0,-1,0).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, minZ).color(r,g,b,a).uv(u0,v1).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,-1,0).endVertex();
+        consumer.vertex(pose.pose(), minX, minY, maxZ).color(r,g,b,a).uv(u0,v0).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,-1,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, maxZ).color(r,g,b,a).uv(u1,v0).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,-1,0).endVertex();
+        consumer.vertex(pose.pose(), maxX, minY, minZ).color(r,g,b,a).uv(u1,v1).overlayCoords(combinedOverlay)
+                .uv2(combinedLight).normal(pose.normal(), 0,-1,0).endVertex();
 
         poseStack.popPose();
     }
