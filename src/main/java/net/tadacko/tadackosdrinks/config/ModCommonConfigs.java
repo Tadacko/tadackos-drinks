@@ -138,8 +138,8 @@ public class ModCommonConfigs {
                 .defineInRange("pressMaxProgress", 60, 1, Integer.MAX_VALUE);
         BARREL_MAX_PROGRESS = BUILDER.comment("How much time in ticks fermentation takes in the Fermenting Barrel (default 72000)")
                 .defineInRange("barrelMaxProgress", 72000, 1, Integer.MAX_VALUE);
-        BARREL_MAX_AGING_PROGRESS = BUILDER.comment("How much time in ticks aging takes in the Fermenting Barrel (default 576000)")
-                .defineInRange("barrelMaxAgingProgress", 576000, 1, Integer.MAX_VALUE);
+        BARREL_MAX_AGING_PROGRESS = BUILDER.comment("How much time in ticks aging takes in the Fermenting Barrel (default 432000)")
+                .defineInRange("barrelMaxAgingProgress", 432000, 1, Integer.MAX_VALUE);
         POT_MAX_PROGRESS = BUILDER.comment("How much time in ticks boiling takes in the Copper Pot (default 2400)")
                 .defineInRange("potMaxProgress", 2400, 1, Integer.MAX_VALUE);
         POT_STILL_MAX_PROGRESS = BUILDER.comment("How much time in ticks distillation takes in the Pot Still (default 2400)")

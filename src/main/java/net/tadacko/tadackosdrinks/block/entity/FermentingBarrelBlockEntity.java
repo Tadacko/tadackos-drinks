@@ -56,7 +56,7 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
 
     // fallback defaults, overridden by config values
     public static int barrelMaxProgress = 72000; // 1h
-    public static int barrelMaxAgingProgress = 576000; // 8h
+    public static int barrelMaxAgingProgress = 432000; // 6h
 
     private final FluidTank fluidTank = new FluidTank(1000) {
         @Override
