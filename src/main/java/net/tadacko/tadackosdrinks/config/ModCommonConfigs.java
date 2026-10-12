@@ -48,10 +48,14 @@ public class ModCommonConfigs {
     public static final ForgeConfigSpec.IntValue BARREL_MAX_AGING_PROGRESS;
     public static final ForgeConfigSpec.IntValue POT_MAX_PROGRESS;
     public static final ForgeConfigSpec.IntValue POT_STILL_MAX_PROGRESS;
-    public static final ForgeConfigSpec.IntValue COLUMN_STILL_2_MAX_PROGRESS;
-    public static final ForgeConfigSpec.IntValue COLUMN_STILL_4_MAX_PROGRESS;
-    public static final ForgeConfigSpec.IntValue COLUMN_STILL_6_MAX_PROGRESS;
-    public static final ForgeConfigSpec.IntValue COLUMN_STILL_8_MAX_PROGRESS;
+    public static final ForgeConfigSpec.IntValue COLUMN_STILL_MAX_PROGRESS_LOW;
+    public static final ForgeConfigSpec.IntValue COLUMN_STILL_MAX_PROGRESS_MID;
+    public static final ForgeConfigSpec.IntValue COLUMN_STILL_MAX_PROGRESS_HIGH;
+    public static final ForgeConfigSpec.IntValue COLUMN_STILL_MAX_PROGRESS_MAX;
+    public static final ForgeConfigSpec.IntValue COLUMN_STILL_HEIGHT_LOW;
+    public static final ForgeConfigSpec.IntValue COLUMN_STILL_HEIGHT_MID;
+    public static final ForgeConfigSpec.IntValue COLUMN_STILL_HEIGHT_HIGH;
+    public static final ForgeConfigSpec.IntValue COLUMN_STILL_HEIGHT_MAX;
     public static final ForgeConfigSpec.DoubleValue HOP_GROW_TIME;
     public static final ForgeConfigSpec.DoubleValue GRAPE_GROW_TIME;
     public static final ForgeConfigSpec.IntValue GRAPE_SPREAD_TIME;
@@ -144,14 +148,22 @@ public class ModCommonConfigs {
                 .defineInRange("potMaxProgress", 2400, 1, Integer.MAX_VALUE);
         POT_STILL_MAX_PROGRESS = BUILDER.comment("How much time in ticks distillation takes in the Pot Still (default 2400)")
                 .defineInRange("potStillMaxProgress", 2400, 1, Integer.MAX_VALUE);
-        COLUMN_STILL_2_MAX_PROGRESS = BUILDER.comment("How much time in ticks distillation takes in a 2 block tall Column Still (default 1200)")
-                .defineInRange("columnStill2MaxProgress", 1200, 1, Integer.MAX_VALUE);
-        COLUMN_STILL_4_MAX_PROGRESS = BUILDER.comment("How much time in ticks distillation takes in a 4 block tall Column Still (default 1200)")
-                .defineInRange("columnStill4MaxProgress", 1200, 1, Integer.MAX_VALUE);
-        COLUMN_STILL_6_MAX_PROGRESS = BUILDER.comment("How much time in ticks distillation takes in a 6 block tall Column Still (default 1600)")
-                .defineInRange("columnStill6MaxProgress", 1600, 1, Integer.MAX_VALUE);
-        COLUMN_STILL_8_MAX_PROGRESS = BUILDER.comment("How much time in ticks distillation takes in an 8 block tall Column Still (default 2400)")
-                .defineInRange("columnStill8MaxProgress", 2400, 1, Integer.MAX_VALUE);
+        COLUMN_STILL_MAX_PROGRESS_LOW = BUILDER.comment("How much time in ticks Low Wine distillation takes in a Column Still (default 1200)")
+                .defineInRange("columnStillMaxProgressLow", 1200, 1, Integer.MAX_VALUE);
+        COLUMN_STILL_MAX_PROGRESS_MID = BUILDER.comment("How much time in ticks Mid-Proof Spirit distillation takes in a Column Still (default 1200)")
+                .defineInRange("columnStillMaxProgressMid", 1200, 1, Integer.MAX_VALUE);
+        COLUMN_STILL_MAX_PROGRESS_HIGH = BUILDER.comment("How much time in ticks High-Proof Spirit distillation takes in a Column Still (default 1600)")
+                .defineInRange("columnStillMaxProgressHigh", 1600, 1, Integer.MAX_VALUE);
+        COLUMN_STILL_MAX_PROGRESS_MAX = BUILDER.comment("How much time in ticks Rectified Spirit distillation takes in a Column Still (default 2400)")
+                .defineInRange("columnStillMaxProgressMax", 2400, 1, Integer.MAX_VALUE);
+        COLUMN_STILL_HEIGHT_LOW = BUILDER.comment("How many blocks tall a Column Still has to be to produce Low Wine (default 2)")
+                .defineInRange("columnStillHeightLow", 2, 1, Integer.MAX_VALUE);
+        COLUMN_STILL_HEIGHT_MID = BUILDER.comment("How many blocks tall a Column Still has to be to produce Mid-Proof Spirit (default 4)")
+                .defineInRange("columnStillHeightMid", 4, 1, Integer.MAX_VALUE);
+        COLUMN_STILL_HEIGHT_HIGH = BUILDER.comment("How many blocks tall a Column Still has to be to produce High-Proof Spirit (default 6)")
+                .defineInRange("columnStillHeightHigh", 6, 1, Integer.MAX_VALUE);
+        COLUMN_STILL_HEIGHT_MAX = BUILDER.comment("How many blocks tall a Column Still has to be to produce Rectified Spirit (default 8)")
+                .defineInRange("columnStillHeightMax", 8, 1, Integer.MAX_VALUE);
         HOP_GROW_TIME = BUILDER.comment("How many random ticks it takes on average for Hop crops to grow by 1 stage, divided by vanilla crop growth " +
                         "speed (default 120)")
                 .defineInRange("hopGrowTime", 120, 0, Double.MAX_VALUE);
@@ -368,6 +380,8 @@ public class ModCommonConfigs {
                 STACK_SIZE_DRINK.get(), IMPROVED_DIGESTION_ALLOW_SPRINT.get(), ERUDITION_FROST_WALKER_MIN_AMP.get(), ERUDITION_MENDING_MIN_AMP.get(),
                 ERUDITION_SOUL_SPEED_MIN_AMP.get(), ERUDITION_SWIFT_SNEAK_MIN_AMP.get(), CRUSHER_MAX_PROGRESS.get(), PRESS_MAX_PROGRESS.get(),
                 BARREL_MAX_PROGRESS.get(), BARREL_MAX_AGING_PROGRESS.get(), POT_MAX_PROGRESS.get(), POT_STILL_MAX_PROGRESS.get(),
-                COLUMN_STILL_2_MAX_PROGRESS.get(), COLUMN_STILL_4_MAX_PROGRESS.get(), COLUMN_STILL_6_MAX_PROGRESS.get(), COLUMN_STILL_8_MAX_PROGRESS.get());
+                COLUMN_STILL_MAX_PROGRESS_LOW.get(), COLUMN_STILL_MAX_PROGRESS_MID.get(), COLUMN_STILL_MAX_PROGRESS_HIGH.get(),
+                COLUMN_STILL_MAX_PROGRESS_MAX.get(), COLUMN_STILL_HEIGHT_LOW.get(), COLUMN_STILL_HEIGHT_MID.get(), COLUMN_STILL_HEIGHT_HIGH.get(),
+                COLUMN_STILL_HEIGHT_MAX.get());
     }
 }

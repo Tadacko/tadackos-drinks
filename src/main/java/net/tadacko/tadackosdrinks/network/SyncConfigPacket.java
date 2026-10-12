@@ -42,16 +42,22 @@ public class SyncConfigPacket {
     private final int barrelMaxAgingProgress;
     private final int potMaxProgress;
     private final int potStillMaxProgress;
-    private final int columnStill2MaxProgress;
-    private final int columnStill4MaxProgress;
-    private final int columnStill6MaxProgress;
-    private final int columnStill8MaxProgress;
+    private final int columnStillMaxProgressLow;
+    private final int columnStillMaxProgressMid;
+    private final int columnStillMaxProgressHigh;
+    private final int columnStillMaxProgressMax;
+    private final int columnStillHeightLow;
+    private final int columnStillHeightMid;
+    private final int columnStillHeightHigh;
+    private final int columnStillHeightMax;
 
     public SyncConfigPacket(double ABVBeer, double ABVWine, double ABVCider, double ABVMead, double ABVSpiritLow, double ABVSpiritMid,
                             double ABVSpiritHigh, double ABVSpiritMax, double ABVWhisky, double ABVBrandy, double ABVRum, double ABVVodka, double ABVGin,
                             double ABVTequila, float charismaMultiplier, int stackSizeMolasses, int stackSizeKeg, int stackSizeGlass, int stackSizeDrink,
                             boolean improvedDigestionAllowSprint, int eruditionFrostWalkerMinAmp, int eruditionMendingMinAmp, int eruditionSoulSpeedMinAmp,
-                            int eruditionSwiftSneakMinAmp, int crusherMaxProgress, int pressMaxProgress, int barrelMaxProgress, int barrelMaxAgingProgress, int potMaxProgress, int potStillMaxProgress, int columnStill2MaxProgress, int columnStill4MaxProgress, int columnStill6MaxProgress, int columnStill8MaxProgress) {
+                            int eruditionSwiftSneakMinAmp, int crusherMaxProgress, int pressMaxProgress, int barrelMaxProgress, int barrelMaxAgingProgress,
+                            int potMaxProgress, int potStillMaxProgress, int columnStillMaxProgressLow, int columnStillMaxProgressMid,
+                            int columnStillMaxProgressHigh, int columnStillMaxProgressMax, int columnStillHeightLow, int columnStillHeightMid, int columnStillHeightHigh, int columnStillHeightMax) {
         this.ABVBeer = ABVBeer;
         this.ABVWine = ABVWine;
         this.ABVCider = ABVCider;
@@ -82,10 +88,14 @@ public class SyncConfigPacket {
         this.barrelMaxAgingProgress = barrelMaxAgingProgress;
         this.potMaxProgress = potMaxProgress;
         this.potStillMaxProgress = potStillMaxProgress;
-        this.columnStill2MaxProgress = columnStill2MaxProgress;
-        this.columnStill4MaxProgress = columnStill4MaxProgress;
-        this.columnStill6MaxProgress = columnStill6MaxProgress;
-        this.columnStill8MaxProgress = columnStill8MaxProgress;
+        this.columnStillMaxProgressLow = columnStillMaxProgressLow;
+        this.columnStillMaxProgressMid = columnStillMaxProgressMid;
+        this.columnStillMaxProgressHigh = columnStillMaxProgressHigh;
+        this.columnStillMaxProgressMax = columnStillMaxProgressMax;
+        this.columnStillHeightLow = columnStillHeightLow;
+        this.columnStillHeightMid = columnStillHeightMid;
+        this.columnStillHeightHigh = columnStillHeightHigh;
+        this.columnStillHeightMax = columnStillHeightMax;
     }
 
     public static void encode(SyncConfigPacket pkt, FriendlyByteBuf buf) {
@@ -119,17 +129,22 @@ public class SyncConfigPacket {
         buf.writeInt(pkt.barrelMaxAgingProgress);
         buf.writeInt(pkt.potMaxProgress);
         buf.writeInt(pkt.potStillMaxProgress);
-        buf.writeInt(pkt.columnStill2MaxProgress);
-        buf.writeInt(pkt.columnStill4MaxProgress);
-        buf.writeInt(pkt.columnStill6MaxProgress);
-        buf.writeInt(pkt.columnStill8MaxProgress);
+        buf.writeInt(pkt.columnStillMaxProgressLow);
+        buf.writeInt(pkt.columnStillMaxProgressMid);
+        buf.writeInt(pkt.columnStillMaxProgressHigh);
+        buf.writeInt(pkt.columnStillMaxProgressMax);
+        buf.writeInt(pkt.columnStillHeightLow);
+        buf.writeInt(pkt.columnStillHeightMid);
+        buf.writeInt(pkt.columnStillHeightHigh);
+        buf.writeInt(pkt.columnStillHeightMax);
     }
 
     public static SyncConfigPacket decode(FriendlyByteBuf buf) {
         return new SyncConfigPacket(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(),
                 buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(),
                 buf.readFloat(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readBoolean(), buf.readInt(), buf.readInt(), buf.readInt(),
-                buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt());
+                buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(),
+                buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt());
     }
 
     public static void handle(final SyncConfigPacket packet, Supplier<NetworkEvent.Context> ctxSupplier) {
@@ -157,10 +172,14 @@ public class SyncConfigPacket {
             FermentingBarrelBlockEntity.barrelMaxAgingProgress = packet.barrelMaxAgingProgress;
             CopperPotBlockEntity.potMaxProgress = packet.potMaxProgress;
             PotStillBlockEntity.potStillMaxProgress = packet.potStillMaxProgress;
-            ColumnStillBlockEntity.columnStill2MaxProgress = packet.columnStill2MaxProgress;
-            ColumnStillBlockEntity.columnStill4MaxProgress = packet.columnStill4MaxProgress;
-            ColumnStillBlockEntity.columnStill6MaxProgress = packet.columnStill6MaxProgress;
-            ColumnStillBlockEntity.columnStill8MaxProgress = packet.columnStill8MaxProgress;
+            ColumnStillBlockEntity.columnStillMaxProgressLow = packet.columnStillMaxProgressLow;
+            ColumnStillBlockEntity.columnStillMaxProgressMid = packet.columnStillMaxProgressMid;
+            ColumnStillBlockEntity.columnStillMaxProgressHigh = packet.columnStillMaxProgressHigh;
+            ColumnStillBlockEntity.columnStillMaxProgressMax = packet.columnStillMaxProgressMax;
+            ColumnStillBlockEntity.columnStillHeightLow = packet.columnStillHeightLow;
+            ColumnStillBlockEntity.columnStillHeightMid = packet.columnStillHeightMid;
+            ColumnStillBlockEntity.columnStillHeightHigh = packet.columnStillHeightHigh;
+            ColumnStillBlockEntity.columnStillHeightMax = packet.columnStillHeightMax;
         });
         ctx.setPacketHandled(true);
     }

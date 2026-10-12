@@ -25,6 +25,7 @@ import net.minecraftforge.fluids.FluidUtil;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.templates.FluidTank;
 import net.tadacko.tadackosdrinks.block.ColumnStillBlock;
+import net.tadacko.tadackosdrinks.block.ColumnStillPart;
 import net.tadacko.tadackosdrinks.block.CondenserPos;
 import net.tadacko.tadackosdrinks.fluid.ModFluids;
 import net.tadacko.tadackosdrinks.util.IFluidColorProvider;
@@ -42,10 +43,14 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
     private boolean cauldronPresent = false;
 
     // fallback defaults, overridden by config values
-    public static int columnStill2MaxProgress = 1200;
-    public static int columnStill4MaxProgress = 1200;
-    public static int columnStill6MaxProgress = 1600;
-    public static int columnStill8MaxProgress = 2400; // 2 min
+    public static int columnStillMaxProgressLow = 1200;
+    public static int columnStillMaxProgressMid = 1200;
+    public static int columnStillMaxProgressHigh = 1600;
+    public static int columnStillMaxProgressMax = 2400; // 2 min
+    public static int columnStillHeightLow = 2;
+    public static int columnStillHeightMid = 4;
+    public static int columnStillHeightHigh = 6;
+    public static int columnStillHeightMax = 8;
 
     // Largest possible input requirement (height 8 tier) - the tank is always this big,
     // fill() below caps the *effective* capacity to whatever the current height's recipe needs.
@@ -399,24 +404,20 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
     }
 
     private static Tier tierFor(int height) {
-        return switch (height) {
-            case 2 -> Tier.LOW;
-            case 4 -> Tier.MID;
-            case 6 -> Tier.HIGH;
-            case 8 -> Tier.MAX;
-            default -> null;
-        };
+        if (height == columnStillHeightLow) return Tier.LOW;
+        if (height == columnStillHeightMid) return Tier.MID;
+        if (height == columnStillHeightHigh) return Tier.HIGH;
+        if (height == columnStillHeightMax) return Tier.MAX;
+        return null;
     }
 
     /** Processing time in ticks by height. */
     private static int maxProgressFor(int height) {
-        return switch (height) {
-            case 2 -> columnStill2MaxProgress;
-            case 4 -> columnStill4MaxProgress;
-            case 6 -> columnStill6MaxProgress;
-            case 8 -> columnStill8MaxProgress;
-            default -> columnStill2MaxProgress;
-        };
+        if (height == columnStillHeightLow) return columnStillMaxProgressLow;
+        if (height == columnStillHeightMid) return columnStillMaxProgressMid;
+        if (height == columnStillHeightHigh) return columnStillMaxProgressHigh;
+        if (height == columnStillHeightMax) return columnStillMaxProgressMax;
+        return columnStillMaxProgressLow;
     }
 
     private static BlockState tierResult(Family family, Tier tier) {
@@ -436,8 +437,7 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
         public int fill(FluidStack resource, FluidAction action) {
             // Cap the effective capacity to whatever this specific fluid's tier actually needs to
             // reach the current height's target tier (see requiredAmountFor's doc comment).
-            int height = getBlockState().hasProperty(ColumnStillBlock.HEIGHT)
-                    ? getBlockState().getValue(ColumnStillBlock.HEIGHT) : ColumnStillBlock.MAX_HEIGHT;
+            int height = ColumnStillBlock.getHeight(getBlockPos(), level);
 
             Integer inputTier = FLUID_INPUT_TIER.get(resource.getFluid());
             int cap = inputTier == null ? MAX_TANK_CAPACITY : requiredAmountFor(inputTier, height);
@@ -539,9 +539,9 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
 
     public static void tick(Level level, BlockPos pos, BlockState state, ColumnStillBlockEntity entity) {
         // ticker server side only, no guard needed
-        if (state.getValue(ColumnStillBlock.SEGMENT) != 0) return; // safety: only the master processes
+        if (state.getValue(ColumnStillBlock.PART) != ColumnStillPart.BOTTOM) return; // safety: only the master processes
 
-        int height = state.getValue(ColumnStillBlock.HEIGHT);
+        int height = ColumnStillBlock.getHeight(pos, level);
         Tier tier = tierFor(height);
 
         FluidStack fluidStack = entity.fluidTank.getFluid();
@@ -625,18 +625,12 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
     @Override
     public FluidStack getFluid() { return this.fluidTank.getFluid(); }
 
-    /** 0..1 fill ratio for rendering, relative to the current height's recipe capacity (or full tank if no recipe yet). */
-    public float getFillPercent() {
-        int height = getBlockState().hasProperty(ColumnStillBlock.HEIGHT)
-                ? getBlockState().getValue(ColumnStillBlock.HEIGHT) : ColumnStillBlock.MAX_HEIGHT;
-        int cap = requiredAmountFor(4, height);
-        if (cap <= 0) cap = MAX_TANK_CAPACITY;
-        return Math.min(1f, (float) fluidTank.getFluidAmount() / cap);
-    }
+    /** 0..1 fill ratio for rendering, 1 block has 3000 capacity. */
+    public float getFillPercent(int height) { return Math.min(1f, (float) fluidTank.getFluidAmount() / (height * 3000)); }
 
     public int getProgress() { return this.progress; }
 
-    public int getMaxProgress() { return maxProgressFor(getBlockState().getValue(ColumnStillBlock.HEIGHT)); }
+    public int getMaxProgress(int height) { return maxProgressFor(height); }
 
     public CompoundTag saveToItemTag() {
         CompoundTag tag = new CompoundTag();
@@ -658,8 +652,7 @@ public class ColumnStillBlockEntity extends BlockEntity implements IFluidColorPr
      */
     @Override
     public AABB getRenderBoundingBox() {
-        BlockState state = getBlockState();
-        int height = state.hasProperty(ColumnStillBlock.HEIGHT) ? state.getValue(ColumnStillBlock.HEIGHT) : 1;
+        int height = ColumnStillBlock.getHeight(getBlockPos(), level);
         BlockPos pos = getBlockPos();
         return new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + height, pos.getZ() + 1);
     }

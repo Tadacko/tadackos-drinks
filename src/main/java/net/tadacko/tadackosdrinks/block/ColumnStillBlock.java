@@ -25,7 +25,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.BlockHitResult;
@@ -39,28 +38,17 @@ import java.util.Collections;
 import java.util.List;
 
 public class ColumnStillBlock extends BaseEntityBlock {
-    public static final int MAX_HEIGHT = 8;
-
     public static final EnumProperty<net.minecraft.core.Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
-    public static final IntegerProperty SEGMENT = IntegerProperty.create("segment", 0, MAX_HEIGHT - 1);
-    // Total height of the column this segment currently belongs to (replicated on every segment)
-    public static final IntegerProperty HEIGHT = IntegerProperty.create("height", 1, MAX_HEIGHT);
     public static final EnumProperty<CondenserPos> CONDENSER = EnumProperty.create("condenser", CondenserPos.class);
     public static final BooleanProperty CLOCK = BooleanProperty.create("clock");
-    // Drives blockstate model selection
     public static final EnumProperty<ColumnStillPart> PART = EnumProperty.create("part", ColumnStillPart.class);
 
-    private static final VoxelShape SHAPE = Block.box(
-            3.0D, 0.0D, 3.0D,
-            13.0D, 16.0D, 13.0D
-    );
+    private static final VoxelShape SHAPE = Block.box(3.0D, 0.0D, 3.0D, 13.0D, 16.0D, 13.0D);
 
     public ColumnStillBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
-                .setValue(SEGMENT, 0)
-                .setValue(HEIGHT, 1)
                 .setValue(CONDENSER, CondenserPos.NONE)
                 .setValue(CLOCK, false)
                 .setValue(PART, ColumnStillPart.BOTTOM)
@@ -82,9 +70,9 @@ public class ColumnStillBlock extends BaseEntityBlock {
         // Stacking on top of an existing column segment: inherit facing, extend height.
         // PART/HEIGHT here are provisional - refreshColumn() corrects the whole column right after placement.
         if (below.is(this)) {
-            int belowSegment = below.getValue(SEGMENT);
+            int belowSegment = getSegment(pos.below(), level);
 
-            if (belowSegment + 1 >= MAX_HEIGHT) {
+            if (belowSegment + 1 >= ColumnStillBlockEntity.columnStillHeightMax) {
                 Player player = pContext.getPlayer();
                 if (!level.isClientSide && player != null) player.displayClientMessage(Component.translatable("message.tadackosdrinks.column_still_place_fail_height"), true);
                 return null;
@@ -92,15 +80,11 @@ public class ColumnStillBlock extends BaseEntityBlock {
 
             return this.defaultBlockState()
                     .setValue(FACING, below.getValue(FACING))
-                    .setValue(SEGMENT, Math.min(belowSegment + 1, MAX_HEIGHT - 1))
-                    .setValue(HEIGHT, Math.min(belowSegment + 2, MAX_HEIGHT))
                     .setValue(PART, ColumnStillPart.TOP);
         }
 
         return this.defaultBlockState()
                 .setValue(FACING, pContext.getHorizontalDirection().getOpposite())
-                .setValue(SEGMENT, 0)
-                .setValue(HEIGHT, 1)
                 .setValue(PART, ColumnStillPart.BOTTOM);
     }
 
@@ -109,7 +93,7 @@ public class ColumnStillBlock extends BaseEntityBlock {
         if (level.getBlockState(pos.above()).is(this)) return false;
 
         BlockState below = level.getBlockState(pos.below());
-        if (below.is(this)) return below.getValue(SEGMENT) + 1 < MAX_HEIGHT;
+        if (below.is(this)) return getSegment(pos.below(), level) + 1 < ColumnStillBlockEntity.columnStillHeightMax;
         return true;
     }
 
@@ -117,7 +101,7 @@ public class ColumnStillBlock extends BaseEntityBlock {
 
     /**
      * Re-scans the whole vertical column containing anyPos: finds the bottom, counts contiguous height,
-     * recomputes SEGMENT/HEIGHT/PART/CONDENSER for every segment, and keeps the block entity anchored on the bottom.
+     * recomputes PART/CONDENSER for every segment, and keeps the block entity anchored on the bottom.
      */
     private static void refreshColumn(Level level, BlockPos anyPos) {
         if (!level.getBlockState(anyPos).is(ModBlocks.COLUMN_STILL.get())) return;
@@ -126,17 +110,14 @@ public class ColumnStillBlock extends BaseEntityBlock {
         while (level.getBlockState(bottomPos.below()).is(ModBlocks.COLUMN_STILL.get())) bottomPos = bottomPos.below();
 
         int height = 0;
-        while (height < MAX_HEIGHT && level.getBlockState(bottomPos.above(height)).is(ModBlocks.COLUMN_STILL.get())) {
+        while (height < ColumnStillBlockEntity.columnStillHeightMax && level.getBlockState(bottomPos.above(height)).is(ModBlocks.COLUMN_STILL.get()))
             height++;
-        }
 
         Direction facing = level.getBlockState(bottomPos).getValue(FACING);
 
         // Direct (own-neighbour) condenser attachment per segment, computed first so we can propagate upward.
         CondenserPos[] direct = new CondenserPos[height];
-        for (int i = 0; i < height; i++) {
-            direct[i] = PotStillBlock.findCondenserDir(level, bottomPos.above(i));
-        }
+        for (int i = 0; i < height; i++) direct[i] = PotStillBlock.findCondenserDir(level, bottomPos.above(i));
 
         for (int i = 0; i < height; i++) {
             BlockPos pos = bottomPos.above(i);
@@ -153,13 +134,9 @@ public class ColumnStillBlock extends BaseEntityBlock {
                 }
             }
 
-            ColumnStillPart part = (i == 0)
-                    ? ColumnStillPart.BOTTOM
-                    : (i == height - 1 ? ColumnStillPart.TOP : ColumnStillPart.MIDDLE);
+            ColumnStillPart part = (i == 0) ? ColumnStillPart.BOTTOM : (i == height - 1 ? ColumnStillPart.TOP : ColumnStillPart.MIDDLE);
 
             BlockState updated = current
-                    .setValue(SEGMENT, i)
-                    .setValue(HEIGHT, height)
                     .setValue(FACING, facing)
                     .setValue(CONDENSER, resolvedCondenser)
                     .setValue(CLOCK, i == 0 && current.getValue(CLOCK))
@@ -172,9 +149,7 @@ public class ColumnStillBlock extends BaseEntityBlock {
     }
 
     /**
-     * Ensures exactly the bottom position of the column has a live ColumnStillBlockEntity.
-     * If restructuring left a stray block entity elsewhere in the column (e.g. the old bottom
-     * got removed and a segment above it became the new bottom), its data is migrated across.
+     * Ensures only the bottom position of the column has a live ColumnStillBlockEntity.
      */
     private static void syncBlockEntities(Level level, BlockPos bottomPos) {
         if (!(level.getBlockEntity(bottomPos) instanceof ColumnStillBlockEntity))
@@ -199,7 +174,7 @@ public class ColumnStillBlock extends BaseEntityBlock {
         if (held.getItem() == ModBlocks.COLUMN_STILL.get().asItem()) return InteractionResult.PASS;
 
         if (!level.isClientSide) {
-            int segment = state.getValue(SEGMENT);
+            int segment = getSegment(pos, level);
             BlockPos bottomPos = pos.below(segment);
             BlockState bottomState = level.getBlockState(bottomPos);
 
@@ -225,29 +200,23 @@ public class ColumnStillBlock extends BaseEntityBlock {
 
             // Fluid / GUI interaction always routes to the master (bottom) block entity
             BlockEntity be = level.getBlockEntity(bottomPos);
-            if (be instanceof ColumnStillBlockEntity master) {
-                if (master.handleRightClick(player, hand)) return InteractionResult.SUCCESS;
-            }
+            if (be instanceof ColumnStillBlockEntity master && master.handleRightClick(player, hand)) return InteractionResult.SUCCESS;
         }
 
         return InteractionResult.CONSUME;
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, SEGMENT, HEIGHT, CONDENSER, CLOCK, PART);
-    }
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) { builder.add(FACING, CONDENSER, CLOCK, PART); }
 
     @Override
-    public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
-    }
+    public RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
 
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         // Only the bottom segment carries a block entity; others are gated out.
-        return state.getValue(SEGMENT) == 0 ? new ColumnStillBlockEntity(pos, state) : null;
+        return state.getValue(PART) == ColumnStillPart.BOTTOM ? new ColumnStillBlockEntity(pos, state) : null;
     }
 
     @Nullable
@@ -257,23 +226,17 @@ public class ColumnStillBlock extends BaseEntityBlock {
     }
 
     @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
-    }
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) { return SHAPE; }
 
     @Override
-    public boolean isCollisionShapeFullBlock(BlockState state, BlockGetter level, BlockPos pos) {
-        return false;
-    }
+    public boolean isCollisionShapeFullBlock(BlockState state, BlockGetter level, BlockPos pos) { return false; }
 
     @Override
-    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
-    }
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) { return SHAPE; }
 
     @Override
     public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
-        if (state.getValue(SEGMENT) == 0) {
+        if (state.getValue(PART) == ColumnStillPart.BOTTOM) {
             Object beObj = builder.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
             if (beObj instanceof ColumnStillBlockEntity still && !still.isDefaultState()) {
                 ItemStack stack = new ItemStack(this.asItem());
@@ -288,5 +251,23 @@ public class ColumnStillBlock extends BaseEntityBlock {
 
         // Non-bottom segments (or an empty bottom) fallback to loot table
         return super.getDrops(state, builder);
+    }
+
+    public static int getSegment(BlockPos pos, LevelReader level) {
+        if (level == null) return 0;
+        Block block = ModBlocks.COLUMN_STILL.get();
+        int segment = 0;
+        while (level.getBlockState(pos.below(segment + 1)).is(block)) segment++;
+        return segment;
+    }
+
+    public static int getHeight(BlockPos bottomPos, LevelReader level) {
+        if (level == null) return 1;
+        Block block = ModBlocks.COLUMN_STILL.get();
+        while (level.getBlockState(bottomPos.below()).is(block)) bottomPos = bottomPos.below();
+
+        int height = 1;
+        while (height < ColumnStillBlockEntity.columnStillHeightMax && level.getBlockState(bottomPos.above(height)).is(block)) height++;
+        return height;
     }
 }

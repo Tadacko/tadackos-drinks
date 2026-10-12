@@ -12,11 +12,13 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.fluids.FluidStack;
 import net.tadacko.tadackosdrinks.block.ColumnStillBlock;
+import net.tadacko.tadackosdrinks.block.ColumnStillPart;
 import net.tadacko.tadackosdrinks.block.entity.ColumnStillBlockEntity;
 
 public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlockEntity> {
@@ -51,11 +53,11 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
         // block entity left behind mid-merge (its cached state already updated to the new HEIGHT/
         // SEGMENT, but not yet removed by ColumnStillBlock#syncBlockEntities) would render a whole
         // extra column's worth of geometry starting from its own - now wrong - position.
-        if (state.hasProperty(ColumnStillBlock.SEGMENT) && state.getValue(ColumnStillBlock.SEGMENT) != 0) return;
+        if (state.getValue(ColumnStillBlock.PART) != ColumnStillPart.BOTTOM) return;
 
         Direction facing = state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)
                 ? state.getValue(BlockStateProperties.HORIZONTAL_FACING) : Direction.SOUTH;
-        int height = state.hasProperty(ColumnStillBlock.HEIGHT) ? state.getValue(ColumnStillBlock.HEIGHT) : 1;
+        int height = ColumnStillBlock.getHeight(blockEntity.getBlockPos(), blockEntity.getLevel());
 
         FluidStack fluid = blockEntity.getFluid();
         TextureAtlasSprite fluidSprite = null;
@@ -72,7 +74,7 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
             fa = ((color >> 24) & 0xFF) / 255f;
         }
 
-        float pct = blockEntity.getFillPercent();
+        float pct = blockEntity.getFillPercent(height);
 
         TextureAtlasSprite glassSprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(GLASS_TEXTURE);
 
@@ -140,7 +142,7 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
 
         // Clock is only meaningful on the bottom segment - render once at the BE's own (untranslated) pose
         if (state.hasProperty(ColumnStillBlock.CLOCK) && state.getValue(ColumnStillBlock.CLOCK))
-            renderClockHand(blockEntity, poseStack, bufferSource, combinedLight, combinedOverlay);
+            renderClockHand(blockEntity, poseStack, bufferSource, combinedLight, combinedOverlay, height);
     }
 
     @Override
@@ -221,7 +223,7 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
 
     // --- CLOCK HAND (copied from PotStillRenderer) ---
     private void renderClockHand(ColumnStillBlockEntity blockEntity, PoseStack poseStack,
-                                 MultiBufferSource bufferSource, int combinedLight, int combinedOverlay) {
+                                 MultiBufferSource bufferSource, int combinedLight, int combinedOverlay, int height) {
         final float basePivotX = 8f / 16f;
         final float basePivotY = 4f / 16f;
         final float basePivotZ = 1.25f / 16f;
@@ -261,7 +263,7 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
         final float sizeY = 2.5f / 16f;
         final float sizeZ = 0.5f / 16f;
 
-        float denom = Math.max(1, blockEntity.getMaxProgress());
+        float denom = Math.max(1, blockEntity.getMaxProgress(height));
         float angle = -(blockEntity.getProgress() / denom) * 360f;
 
         poseStack.pushPose();
@@ -290,7 +292,7 @@ public class ColumnStillRenderer implements BlockEntityRenderer<ColumnStillBlock
         }
 
         TextureAtlasSprite white = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                .apply(new ResourceLocation("minecraft", "block/white_concrete"));
+                .apply(new ResourceLocation("block/white_concrete"));
 
         PoseStack.Pose pose = poseStack.last();
 
