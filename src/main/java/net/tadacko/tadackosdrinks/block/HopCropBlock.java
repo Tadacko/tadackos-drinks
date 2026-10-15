@@ -10,10 +10,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.ItemLike;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
@@ -28,10 +25,7 @@ import net.minecraftforge.common.IPlantable;
 import net.tadacko.tadackosdrinks.item.ModItems;
 
 public class HopCropBlock extends CropBlock {
-    public static final int SPREAD_AGE = 2;
-    public static final int MAX_AGE = 3;
-
-    public static float hopGrowTime = 120f; // fallback default, overridden by config value
+    public static final IntegerProperty AGE = IntegerProperty.create("age", 0, 3);
 
     private static final VoxelShape[] SHAPE_BY_AGE = new VoxelShape[] {
             Block.box(4.0D, 0.0D, 4.0D, 12.0D, 16.0D, 12.0D),
@@ -40,31 +34,25 @@ public class HopCropBlock extends CropBlock {
             Block.box(3.0D, 0.0D, 3.0D, 13.0D, 16.0D, 13.0D)
     };
 
-    public static final IntegerProperty AGE = IntegerProperty.create("age", 0, 3);
+    public static final int SPREAD_AGE = 2;
+    public static final int MAX_AGE = 3;
 
-    public static final IntegerProperty UNSUPPORTED = IntegerProperty.create("unsupported", 0, 2);
-    // how many scheduled ticks without support before breaking
-    private static final int UNSUPPORTED_THRESHOLD = 2;
-    private static final int CHECK_DELAY = 1; // check every tick while unsupported
+    public static float hopGrowTime = 120f; // fallback default, overridden by config value
+
+    private static final int SUPPORT_CHECK_DELAY = 2; // ticks to wait before verifying support
 
     public HopCropBlock(Properties pProperties) {
         super(pProperties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(UNSUPPORTED, 0));
+        this.registerDefaultState(this.stateDefinition.any());
     }
 
     @Override
-    public VoxelShape getShape(BlockState pState, BlockGetter pLevel, BlockPos pPos, CollisionContext pContext) {
-        return SHAPE_BY_AGE[this.getAge(pState)];
-    }
+    public VoxelShape getShape(BlockState pState, BlockGetter pLevel, BlockPos pPos, CollisionContext pContext) { return SHAPE_BY_AGE[this.getAge(pState)]; }
 
     @Override
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block changedBlock, BlockPos fromPos, boolean isMoving) {
-        super.neighborChanged(state, level, pos, changedBlock, fromPos, isMoving);
-        if (level.isClientSide) return;
-
-        if (!fromPos.equals(pos.above())) return;
-
-        level.scheduleTick(pos, this, CHECK_DELAY);
+    public BlockState updateShape(BlockState state, Direction dir, BlockState neighborState, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+        if (dir.getAxis().isVertical()) level.scheduleTick(pos, this, SUPPORT_CHECK_DELAY);
+        return state; // no super cuz it breaks the block without delay
     }
 
     @Override
@@ -106,8 +94,10 @@ public class HopCropBlock extends CropBlock {
 
     @Override
     public boolean canSurvive(BlockState pState, LevelReader pLevel, BlockPos pPos) {
-        return super.canSurvive(pState, pLevel, pPos) || (pLevel.getBlockState(pPos.below()).is(this) &&
-                pLevel.getBlockState(pPos.below()).getValue(AGE) >= SPREAD_AGE);
+        return (super.canSurvive(pState, pLevel, pPos) || (pLevel.getBlockState(pPos.below()).is(this) &&
+                pLevel.getBlockState(pPos.below()).getValue(AGE) >= SPREAD_AGE)) &&
+                (pLevel.getBlockState(pPos.above()).getBlock() instanceof TrellisBlock || pLevel.getBlockState(pPos.above()).is(ModBlocks.ROPE.get()) ||
+                        pLevel.getBlockState(pPos.above()).is(ModBlocks.HOP_CROP.get()));
     }
 
     @Override
@@ -139,7 +129,7 @@ public class HopCropBlock extends CropBlock {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> pBuilder) { pBuilder.add(AGE, UNSUPPORTED); }
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> pBuilder) { pBuilder.add(AGE); }
 
     // onRemove + defer replacement to make it work in creative and drop stuff in survival
     @Override
@@ -148,7 +138,7 @@ public class HopCropBlock extends CropBlock {
             serverLevel.getServer().execute(() -> {
                 BlockState rope = ModBlocks.ROPE.get().defaultBlockState();
                 level.setBlock(pos, rope, Block.UPDATE_ALL);
-                level.scheduleTick(pos, ModBlocks.ROPE.get(), CHECK_DELAY);
+                level.scheduleTick(pos, ModBlocks.ROPE.get(), SUPPORT_CHECK_DELAY);
             });
         }
         super.onRemove(state, level, pos, newState, isMoving);
@@ -156,23 +146,6 @@ public class HopCropBlock extends CropBlock {
 
     @Override
     public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource rand) {
-        BlockState above = level.getBlockState(pos.above());
-        boolean hasAboveSupport = above.is(this) || above.is(ModBlocks.ROPE.get()) || above.getBlock() instanceof TrellisBlock;
-
-        if (hasAboveSupport) {
-            if (state.getValue(UNSUPPORTED) != 0) {
-                BlockState reset = state.setValue(UNSUPPORTED, 0);
-                level.setBlock(pos, reset, Block.UPDATE_ALL);
-            }
-            return;
-        }
-
-        int unsupported = state.getValue(UNSUPPORTED);
-        int next = Math.min(UNSUPPORTED_THRESHOLD, unsupported + CHECK_DELAY);
-        BlockState updated = state.setValue(UNSUPPORTED, next);
-        level.setBlock(pos, updated, Block.UPDATE_ALL);
-
-        if (next == UNSUPPORTED_THRESHOLD) level.destroyBlock(pos, true);
-        else level.scheduleTick(pos, this, CHECK_DELAY);
+        if (!this.canSurvive(state, level, pos)) level.destroyBlock(pos, true);
     }
 }

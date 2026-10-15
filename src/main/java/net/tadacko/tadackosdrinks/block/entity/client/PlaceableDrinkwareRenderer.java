@@ -10,8 +10,8 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
+import net.tadacko.tadackosdrinks.TadackosDrinks;
 import net.tadacko.tadackosdrinks.block.DrinkVariant;
-import net.tadacko.tadackosdrinks.block.PlaceableDrinkwareBlock;
 import net.tadacko.tadackosdrinks.block.entity.PlaceableDrinkwareBlockEntity;
 import net.tadacko.tadackosdrinks.client.DrinkRenderHelper;
 import net.tadacko.tadackosdrinks.client.DrinkRenderHelper.Volume;
@@ -23,7 +23,7 @@ public class PlaceableDrinkwareRenderer implements BlockEntityRenderer<Placeable
 
     @Override
     public void render(PlaceableDrinkwareBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay) {
-        DrinkVariant variant = be.getBlockState().getValue(PlaceableDrinkwareBlock.VARIANT);
+        DrinkVariant variant = be.getDrinkVariant();
 
         Volume vol = DrinkRenderHelper.getVolume(variant);
         if (vol == null) return;
@@ -31,20 +31,16 @@ public class PlaceableDrinkwareRenderer implements BlockEntityRenderer<Placeable
         ResourceLocation fluidTex = DrinkRenderHelper.getFluidTexture(variant);
         if (fluidTex == null) return;
 
-        TextureAtlasSprite fluidSprite = Minecraft.getInstance()
-                .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                .apply(fluidTex);
+        TextureAtlasSprite fluidSprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(fluidTex);
 
-        VertexConsumer consumer = FermentingBarrelRenderer.fluidTranslucent ? bufferSource.getBuffer(RenderType.translucent()) :
+        VertexConsumer consumer = drinkTranslucent ? bufferSource.getBuffer(RenderType.translucent()) :
                 bufferSource.getBuffer(RenderType.solid());
         DrinkRenderHelper.renderFluid(consumer, poseStack.last(), fluidSprite, vol, light, overlay);
 
         // Render foam if applicable
         ResourceLocation foamTex = DrinkRenderHelper.getFoamTexture(variant);
         if (foamTex != null) {
-            TextureAtlasSprite foamSprite = Minecraft.getInstance()
-                    .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                    .apply(foamTex);
+            TextureAtlasSprite foamSprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(foamTex);
             DrinkRenderHelper.renderFoam(consumer, poseStack.last(), foamSprite, light, overlay);
         }
     }

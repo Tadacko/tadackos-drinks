@@ -18,7 +18,6 @@ import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.fluids.FluidStack;
 import net.tadacko.tadackosdrinks.block.FermentingBarrelBlock;
 import net.tadacko.tadackosdrinks.block.entity.FermentingBarrelBlockEntity;
-import net.tadacko.tadackosdrinks.block.BarrelState;
 
 public class FermentingBarrelRenderer implements BlockEntityRenderer<FermentingBarrelBlockEntity> {
     private static final float MIN_HEIGHT = 2f / 16f; // Bottom of barrel interior
@@ -89,12 +88,9 @@ public class FermentingBarrelRenderer implements BlockEntityRenderer<FermentingB
         BlockState blockState = blockEntity.getBlockState();
 
         // Safety: if the blockState doesn't contain the property for some reason, skip
-        if (blockState.hasProperty(FermentingBarrelBlock.CLOCK) && blockState.getValue(FermentingBarrelBlock.CLOCK)) {
-            // check the STATE enum property
-            BarrelState stateValue = blockState.getValue(FermentingBarrelBlock.STATE);
-            if (stateValue == BarrelState.CLOSED || stateValue == BarrelState.YEAST)
-                renderClockHand(blockEntity, poseStack, bufferSource, combinedLight, combinedOverlay);
-        }
+        if (blockState.hasProperty(FermentingBarrelBlock.CLOCK) && blockState.getValue(FermentingBarrelBlock.CLOCK) &&
+                blockState.getValue(FermentingBarrelBlock.CLOSED))
+            renderClockHand(blockEntity, poseStack, bufferSource, combinedLight, combinedOverlay);
 
         poseStack.popPose();
     }
@@ -206,7 +202,7 @@ public class FermentingBarrelRenderer implements BlockEntityRenderer<FermentingB
 
         // Bind a known white sprite from the block atlas so vertex colors tint correctly
         TextureAtlasSprite white = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                .apply(new ResourceLocation("minecraft", "block/white_concrete"));
+                .apply(new ResourceLocation("block/white_concrete"));
 
         // compute UV sizes in sprite pixels (same technique as your fluid code)
         PoseStack.Pose pose = poseStack.last();

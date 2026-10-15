@@ -24,6 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
@@ -38,7 +39,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class ColumnStillBlock extends BaseEntityBlock {
-    public static final EnumProperty<net.minecraft.core.Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<CondenserPos> CONDENSER = EnumProperty.create("condenser", CondenserPos.class);
     public static final BooleanProperty CLOCK = BooleanProperty.create("clock");
     public static final EnumProperty<ColumnStillPart> PART = EnumProperty.create("part", ColumnStillPart.class);
@@ -144,7 +145,6 @@ public class ColumnStillBlock extends BaseEntityBlock {
 
             if (!updated.equals(current)) level.setBlock(pos, updated, Block.UPDATE_ALL);
         }
-
         syncBlockEntities(level, bottomPos);
     }
 
@@ -188,7 +188,6 @@ public class ColumnStillBlock extends BaseEntityBlock {
                         level.addFreshEntity(drop);
                     }
                 }
-
                 return InteractionResult.SUCCESS;
             }
 
@@ -202,7 +201,6 @@ public class ColumnStillBlock extends BaseEntityBlock {
             BlockEntity be = level.getBlockEntity(bottomPos);
             if (be instanceof ColumnStillBlockEntity master && master.handleRightClick(player, hand)) return InteractionResult.SUCCESS;
         }
-
         return InteractionResult.CONSUME;
     }
 
@@ -248,7 +246,6 @@ public class ColumnStillBlock extends BaseEntityBlock {
                 return Collections.singletonList(stack);
             }
         }
-
         // Non-bottom segments (or an empty bottom) fallback to loot table
         return super.getDrops(state, builder);
     }

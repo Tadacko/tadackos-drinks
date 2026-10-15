@@ -1142,14 +1142,14 @@ public final class GuideBookContent {
                 .add(0, -1, 0, ModBlocks.HOP_CROP.get().defaultBlockState()
                         .setValue(HopCropBlock.AGE, 3))
                 .add(0, 0, 0, ModBlocks.TRELLIS_OAK.get().defaultBlockState()
-                        .setValue(TrellisBlock.ROPE, true)
-                        .setValue(TrellisBlock.WEST, true))
+                        .setValue(TrellisBlock.DOWN, TrellisBlock.TrellisConnection.OTHER)
+                        .setValue(TrellisBlock.WEST, TrellisBlock.TrellisConnection.TRELLIS))
                 .add(-1, 0, 0, ModBlocks.TRELLIS_OAK.get().defaultBlockState()
-                        .setValue(TrellisBlock.EAST, true)
-                        .setValue(TrellisBlock.DOWN, true))
+                        .setValue(TrellisBlock.EAST, TrellisBlock.TrellisConnection.TRELLIS)
+                        .setValue(TrellisBlock.DOWN, TrellisBlock.TrellisConnection.TRELLIS))
                 .add(-1, -1, 0, ModBlocks.TRELLIS_OAK.get().defaultBlockState()
                         .setValue(TrellisBlock.UP, true)
-                        .setValue(TrellisBlock.DOWN, true))
+                        .setValue(TrellisBlock.DOWN, TrellisBlock.TrellisConnection.TRELLIS))
                 .add(-1, -2, 0, Blocks.GRASS_BLOCK.defaultBlockState());
     }
 
@@ -1163,8 +1163,8 @@ public final class GuideBookContent {
                         .setValue(GrapeWireCropBlock.AGE, 1)
                         .setValue(GrapeWireCropBlock.FACING, Direction.WEST))
                 .add(-1, 0, 0, ModBlocks.TRELLIS_OAK.get().defaultBlockState()
-                        .setValue(TrellisBlock.WIRE_EAST, true)
-                        .setValue(TrellisBlock.DOWN, true))
+                        .setValue(TrellisBlock.EAST, TrellisBlock.TrellisConnection.OTHER)
+                        .setValue(TrellisBlock.DOWN, TrellisBlock.TrellisConnection.TRELLIS))
                 .add(-1, -1, 0, Blocks.GRASS_BLOCK.defaultBlockState());
     }
 

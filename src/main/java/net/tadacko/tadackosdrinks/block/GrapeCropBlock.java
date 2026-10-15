@@ -5,7 +5,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
@@ -13,12 +12,13 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.common.ForgeHooks;
 import net.minecraftforge.common.IPlantable;
 
-import javax.annotation.Nullable;
 import java.util.function.Supplier;
 
 public class GrapeCropBlock extends CropBlock {
@@ -30,6 +30,11 @@ public class GrapeCropBlock extends CropBlock {
     public static final BooleanProperty WIRE_EAST = BooleanProperty.create("wire_east");
     public static final BooleanProperty WIRE_WEST = BooleanProperty.create("wire_west");
 
+    private static final VoxelShape[] SHAPES = new VoxelShape[] {
+            Block.box(5.0D, 0.0D, 5.0D, 11.0D, 10.0D, 11.0D),
+            Block.box(5.0D, 0.0D, 5.0D, 11.0D, 16.0D, 11.0D)
+    };
+
     public static final int MAX_AGE = 3;
 
     // fallback defaults, overridden by config values
@@ -38,11 +43,6 @@ public class GrapeCropBlock extends CropBlock {
 
     private final Supplier<Item> seedItem;
     private final Supplier<Block> wireCropVariant;
-
-    private static final VoxelShape[] SHAPES = new VoxelShape[] {
-            Block.box(5.0D, 0.0D, 5.0D, 11.0D, 10.0D, 11.0D),
-            Block.box(5.0D, 0.0D, 5.0D, 11.0D, 16.0D, 11.0D)
-    };
 
     public GrapeCropBlock(Properties properties, Supplier<Item> seedItem, Supplier<Block> wireCropVariant) {
         super(properties);
@@ -94,40 +94,35 @@ public class GrapeCropBlock extends CropBlock {
     @Override
     public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
         super.onPlace(state, level, pos, oldState, isMoving);
-        if (!level.isClientSide) {
-            boolean hasTrellisAbove = level.getBlockState(pos.above()).getBlock() instanceof TrellisBlock ||
-                    level.getBlockState(pos.above()).getBlock() instanceof GrapeCropBlock;
-            BlockState newState = state.setValue(TRELLIS, hasTrellisAbove);
+        if (level.isClientSide) return;
 
-            level.setBlock(pos, newState, 2);
+        boolean hasTrellisAbove = level.getBlockState(pos.above()).getBlock() instanceof TrellisBlock ||
+                level.getBlockState(pos.above()).getBlock() instanceof GrapeCropBlock;
+        BlockState newState = state.setValue(TRELLIS, hasTrellisAbove);
+        for (Direction dir : Direction.Plane.HORIZONTAL) newState = TrellisBlock.updateWireConnection(newState, level, pos, dir);
+        if (newState != state) level.setBlock(pos, newState, Block.UPDATE_ALL);
 
-            if (!this.canSurvive(newState, level, pos)) level.destroyBlock(pos, true);
-        }
+        if (!this.canSurvive(newState, level, pos)) level.destroyBlock(pos, true);
     }
 
     @Override
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean isMoving) {
-        super.neighborChanged(state, level, pos, block, fromPos, isMoving);
-        if (level.isClientSide) return;
+    public BlockState updateShape(BlockState state, Direction dir, BlockState neighborState, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+        BlockState updated = state;
 
-        if (fromPos.equals(pos.above())) {
+        if (dir == Direction.UP) {
             boolean hasTrellis = level.getBlockState(pos.above()).getBlock() instanceof TrellisBlock ||
                     level.getBlockState(pos.above()).getBlock() instanceof GrapeCropBlock;
             int age = state.getValue(getAgeProperty());
-            BlockState newState = state.setValue(TRELLIS, hasTrellis);
+            updated = updated.setValue(TRELLIS, hasTrellis);
 
-            if (!hasTrellis && age > 1) newState = newState.setValue(getAgeProperty(), 1);
+            if (!hasTrellis && age > 1) updated = updated.setValue(getAgeProperty(), 1);
 
-            if (newState != state) level.setBlock(pos, newState, 2);
-
-            if (!this.canSurvive(newState, level, pos)) level.destroyBlock(pos, true);
-        } else {
+            if (!this.canSurvive(updated, level, pos)) level.destroyBlock(pos, true);
+        } else if (dir.getAxis().isHorizontal()) {
             // If a horizontal neighbor changed, recompute wires
-            if (fromPos.getY() == pos.getY()) {
-                BlockState newState = updateWireConnections(state, level, pos);
-                if (newState != state) level.setBlock(pos, newState, Block.UPDATE_ALL);
-            }
+            updated = TrellisBlock.updateWireConnection(state, level, pos, dir);
         }
+        return super.updateShape(updated, dir, neighborState, level, pos, neighborPos);
     }
 
     @Override
@@ -135,15 +130,12 @@ public class GrapeCropBlock extends CropBlock {
         if (!pLevel.isAreaLoaded(pPos, 1)) return;
         if (pLevel.getRawBrightness(pPos, 0) < 9) return;
 
-        // keep wire flags up-to-date
-        BlockState wireUpdated = updateWireConnections(pState, pLevel, pPos);
-        if (wireUpdated != pState) pLevel.setBlock(pPos, wireUpdated, 2);
-
         int currentAge = this.getAge(pState);
 
         // side spread independent of upward spread
-        if (currentAge >= 1 && ForgeHooks.onCropsGrowPre(pLevel, pPos, pState, pRandom.nextInt(grapeSpreadTime) == 0))
-            if (attemptSideSpread(pLevel, pPos)) ForgeHooks.onCropsGrowPost(pLevel, pPos, pState);
+        if (currentAge >= 1 && ForgeHooks.onCropsGrowPre(pLevel, pPos, pState, pRandom.nextInt(grapeSpreadTime) == 0) &&
+                attemptSideSpread(pLevel, pPos))
+            ForgeHooks.onCropsGrowPost(pLevel, pPos, pState);
 
         float growthSpeed = getGrowthSpeed(this, pLevel, pPos);
 
@@ -154,10 +146,7 @@ public class GrapeCropBlock extends CropBlock {
         if (currentAge == getMaxAge()) {
             if (pLevel.getBlockState(pPos.above()).getBlock() instanceof TrellisBlock) {
                 // Preserve VARIANT when spawning above
-                BlockState newState = this.defaultBlockState().setValue(AGE, 0).setValue(VARIANT, pState.getValue(VARIANT));
-                // keep wire flags up-to-date
-                BlockState wireUpdatedAbove = updateWireConnections(newState, pLevel, pPos.above());
-                pLevel.setBlock(pPos.above(), wireUpdatedAbove, Block.UPDATE_ALL);
+                pLevel.setBlock(pPos.above(), this.defaultBlockState().setValue(AGE, 0).setValue(VARIANT, pState.getValue(VARIANT)), Block.UPDATE_ALL);
             }
         } else if (currentAge == 0 || pLevel.getBlockState(pPos.above()).getBlock() instanceof TrellisBlock) { // prevent going above age 1 if no trellis
             int nextAge = currentAge + 1;
@@ -198,26 +187,10 @@ public class GrapeCropBlock extends CropBlock {
         if (currentAge == getMaxAge()) {
             if (pLevel.getBlockState(pPos.above()).getBlock() instanceof TrellisBlock) {
                 // Preserve VARIANT when spawning above
-                BlockState newState = this.defaultBlockState().setValue(AGE, 0).setValue(VARIANT, pState.getValue(VARIANT));
-                // keep wire flags up-to-date
-                BlockState wireUpdatedAbove = updateWireConnections(newState, pLevel, pPos.above());
-                pLevel.setBlock(pPos.above(), wireUpdatedAbove, Block.UPDATE_ALL);
+                pLevel.setBlock(pPos.above(), this.defaultBlockState().setValue(AGE, 0).setValue(VARIANT, pState.getValue(VARIANT)), Block.UPDATE_ALL);
             }
         } else if (currentAge == 0 || pLevel.getBlockState(pPos.above()).getBlock() instanceof TrellisBlock) // prevent going above age 1 if no trellis
             pLevel.setBlock(pPos, pState.setValue(AGE, nextAge), Block.UPDATE_ALL);
-    }
-
-    @Nullable
-    @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        BlockPos pos = context.getClickedPos();
-        Level level = context.getLevel();
-        BlockState state = this.defaultBlockState();
-        boolean hasTrellisAbove = level.getBlockState(pos.above()).getBlock() instanceof TrellisBlock ||
-                level.getBlockState(pos.above()).getBlock() instanceof GrapeCropBlock;
-        state = state.setValue(getAgeProperty(), 0).setValue(TRELLIS, hasTrellisAbove);
-
-        return updateWireConnections(state, level, pos);
     }
 
     @Override
@@ -243,33 +216,9 @@ public class GrapeCropBlock extends CropBlock {
                     default -> trellis = ModBlocks.TRELLIS_OAK.get().defaultBlockState();
                 }
                 level.setBlock(pos, trellis, Block.UPDATE_ALL);
-                BlockState updated = trellis.updateShape(Direction.UP, level.getBlockState(pos.above()), level, pos, pos.above());
-                level.setBlock(pos, updated, Block.UPDATE_ALL);
             });
         }
         super.onRemove(state, level, pos, newState, isMoving);
-    }
-
-    public static BlockState updateWireConnections(BlockState state, LevelAccessor level, BlockPos pos) {
-        BlockState updated = state;
-        for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BooleanProperty wireProp = TrellisBlock.getWireProp(dir);
-            BlockPos checkPos = pos.relative(dir);
-            BlockState neighborState = level.getBlockState(checkPos);
-            boolean hasWire = false;
-
-            // Accept facing toward this block OR away from this block
-            if (neighborState.getBlock() instanceof TrellisWireBlock) {
-                Direction neighborFacing = neighborState.getValue(TrellisWireBlock.FACING);
-                if (neighborFacing == dir.getOpposite() || neighborFacing == dir) hasWire = true;
-            } else if (neighborState.getBlock() instanceof GrapeWireCropBlock) {
-                Direction neighborFacing = neighborState.getValue(GrapeWireCropBlock.FACING);
-                if (neighborFacing == dir.getOpposite() || neighborFacing == dir) hasWire = true;
-            }
-
-            updated = updated.setValue(wireProp, hasWire);
-        }
-        return updated;
     }
 
     private boolean canGroundSpreadToWire(LevelAccessor level, BlockPos wirePos, Direction dir) {

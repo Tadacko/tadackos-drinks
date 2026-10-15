@@ -29,7 +29,6 @@ import net.minecraftforge.fluids.FluidUtil;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.templates.FluidTank;
 import net.tadacko.tadackosdrinks.block.FermentingBarrelBlock;
-import net.tadacko.tadackosdrinks.block.BarrelState;
 import net.tadacko.tadackosdrinks.fluid.DrinkwareTransfer;
 import net.tadacko.tadackosdrinks.fluid.ModFluids;
 import net.tadacko.tadackosdrinks.item.ModItems;
@@ -291,7 +290,7 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
 
         FluidStack fluidStack = entity.fluidTank.getFluid();
 
-        if (state.getValue(FermentingBarrelBlock.STATE) == BarrelState.CLOSED) {
+        if (state.getValue(FermentingBarrelBlock.CLOSED)) {
             if (entity.hasFluidForFermentation() && entity.yeastAmount == MAX_YEAST_AMOUNT) {
                 entity.progress++;
 
@@ -337,13 +336,9 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
                 syncClockIfNeeded(level, pos, state, entity);
 
                 if (entity.progress >= barrelMaxProgress) {
-                    level.setBlock(pos, state.setValue(FermentingBarrelBlock.STATE, BarrelState.YEAST), 3);
-
-                    // don't reset grain type, it's needed in handleRightClick
+                    // don't reset grain type and progress, needed in handleRightClick
+                    // reset grain and sugar amount in handleRightClick instead so that it keeps them when broken while closed
                     entity.isProcessing = false;
-                    entity.progress = 0;
-                    entity.grainAmount = 0;
-                    entity.sugarAmount = 0;
 
                     entity.setChanged();
                 }
@@ -366,7 +361,7 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
         FluidStack fluidStack = this.fluidTank.getFluid();
 
         // drinkware transfer
-        if (state.getValue(FermentingBarrelBlock.STATE) == BarrelState.OPEN) {
+        if (!state.getValue(FermentingBarrelBlock.CLOSED)) {
             Optional<Item> filledGlassItem = DrinkwareTransfer.tryFill(this.fluidTank, heldItem);
             if (filledGlassItem.isPresent()) {
                 if (!player.isCreative()) {
@@ -397,7 +392,7 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
 
         // generic fluid container transfer
         // Fluid validity for fills is handled internally by FluidTank.fill() via isFluidValid().
-        if (state.getValue(FermentingBarrelBlock.STATE) == BarrelState.OPEN) {
+        if (!state.getValue(FermentingBarrelBlock.CLOSED)) {
             FluidStack before = this.fluidTank.getFluid().copy();
             if (FluidUtil.interactWithFluidHandler(player, hand, this.fluidTank)) {
                 FluidStack after = this.fluidTank.getFluid();
@@ -419,42 +414,38 @@ public class FermentingBarrelBlockEntity extends BlockEntity implements IFluidCo
         }
 
         // close barrel
-        if (heldItem.isEmpty() && state.getValue(FermentingBarrelBlock.STATE) == BarrelState.OPEN) {
+        if (heldItem.isEmpty() && !state.getValue(FermentingBarrelBlock.CLOSED)) {
             if ((hasFluidForFermentation() && this.yeastAmount == MAX_YEAST_AMOUNT) || hasFluidForAging() ||
                     (hasWaterForCultivation() && this.grainAmount == MAX_GRAIN_AMOUNT && this.sugarAmount == MAX_SUGAR_AMOUNT))
                 this.isProcessing = true;
-            level.setBlock(pos, state.setValue(FermentingBarrelBlock.STATE, BarrelState.CLOSED), 3);
+            level.setBlock(pos, state.setValue(FermentingBarrelBlock.CLOSED, true), 3);
             setChanged(level, pos, state);
             level.playSound(null, pos, SoundEvents.BARREL_CLOSE, SoundSource.BLOCKS, 1.0F, 1.0F);
             return true;
         }
 
         // open barrel
-        if (heldItem.isEmpty() && state.getValue(FermentingBarrelBlock.STATE) == BarrelState.CLOSED && !this.isProcessing) {
-            level.setBlock(pos, state.setValue(FermentingBarrelBlock.STATE, BarrelState.OPEN), 3);
-            setChanged(level, pos, state);
-            level.playSound(null, pos, SoundEvents.BARREL_OPEN, SoundSource.BLOCKS, 1.0F, 1.0F);
-            return true;
-        }
+        if (heldItem.isEmpty() && state.getValue(FermentingBarrelBlock.CLOSED) && !this.isProcessing) {
+            // open barrel with yeast
+            if (fluidStack.getAmount() != 0 && fluidStack.getFluid() == Fluids.WATER && this.progress >= barrelMaxProgress) {
+                this.fluidTank.drain(1000, IFluidHandler.FluidAction.EXECUTE);
+                this.progress = 0;
+                this.grainAmount = 0;
+                this.sugarAmount = 0;
 
-        // open barrel with yeast
-        if (heldItem.isEmpty() && state.getValue(FermentingBarrelBlock.STATE) == BarrelState.YEAST && fluidStack.getAmount() != 0 &&
-                fluidStack.getFluid() == Fluids.WATER) {
-            this.fluidTank.drain(1000, IFluidHandler.FluidAction.EXECUTE);
+                ItemStack itemStack = new ItemStack(ModItems.YEAST.get(), 8);
 
-            ItemStack itemStack = new ItemStack(ModItems.YEAST.get(), 8);
-
-            ItemEntity itemEntity = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, itemStack);
-            level.addFreshEntity(itemEntity);
-
-            level.setBlock(pos, state.setValue(FermentingBarrelBlock.STATE, BarrelState.OPEN), 3);
+                ItemEntity itemEntity = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, itemStack);
+                level.addFreshEntity(itemEntity);
+            }
+            level.setBlock(pos, state.setValue(FermentingBarrelBlock.CLOSED, false), 3);
             setChanged(level, pos, state);
             level.playSound(null, pos, SoundEvents.BARREL_OPEN, SoundSource.BLOCKS, 1.0F, 1.0F);
             return true;
         }
 
         // can't open barrel
-        if (heldItem.isEmpty() && state.getValue(FermentingBarrelBlock.STATE) == BarrelState.CLOSED && this.progress != 0)
+        if (heldItem.isEmpty() && state.getValue(FermentingBarrelBlock.CLOSED) && this.progress != 0)
             player.displayClientMessage(Component.translatable("message.tadackosdrinks.fermenting_barrel_open_fail_progress"), true);
 
         return false;

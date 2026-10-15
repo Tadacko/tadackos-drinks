@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -35,28 +36,22 @@ import net.tadacko.tadackosdrinks.item.ModItems;
 import java.util.Optional;
 
 public class KegBlock extends Block implements EntityBlock {
-    private static final VoxelShape SHAPE = Block.box(
-            3.0D, 0.0D, 3.0D,
-            13.0D, 12.0D, 13.0D
-    );
+    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+
+    private static final VoxelShape SHAPE = Block.box(3.0D, 0.0D, 3.0D, 13.0D, 12.0D, 13.0D);
 
     public KegBlock(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any()
-                .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH)
-        );
+        this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext pContext) {
-        return this.defaultBlockState()
-                .setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection().getOpposite());
+        return this.defaultBlockState().setValue(FACING, pContext.getHorizontalDirection().getOpposite());
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new KegBlockEntity(pos, state);
-    }
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) { return new KegBlockEntity(pos, state); }
 
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
@@ -114,18 +109,15 @@ public class KegBlock extends Block implements EntityBlock {
 
     private void giveResult(Player player, InteractionHand hand, ItemStack held, ItemStack result) {
         held.shrink(1);
-        if (held.isEmpty()) {
-            player.setItemInHand(hand, result);
-        } else if (!player.getInventory().add(result)) {
-            player.drop(result, false);
-        }
+        if (held.isEmpty()) player.setItemInHand(hand, result);
+        else if (!player.getInventory().add(result)) player.drop(result, false);
     }
 
     @Override
     public boolean isCollisionShapeFullBlock(BlockState state, BlockGetter level, BlockPos pos) { return false; }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) { builder.add(BlockStateProperties.HORIZONTAL_FACING); }
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) { builder.add(FACING); }
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) { return SHAPE; }

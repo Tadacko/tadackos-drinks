@@ -4,9 +4,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -18,28 +18,27 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.tadacko.tadackosdrinks.block.entity.PlaceableDrinkwareBlockEntity;
-import net.tadacko.tadackosdrinks.item.ModItems;
 
 public class PlaceableDrinkwareBlock extends Block implements EntityBlock {
-    public static final EnumProperty<DrinkVariant> VARIANT = EnumProperty.create("variant", DrinkVariant.class);
+    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<GlassVariant> VARIANT = EnumProperty.create("variant", GlassVariant.class);
+
     private static final VoxelShape SHAPE = Block.box(4.0D, 0.0D, 4.0D, 12.0D, 8.0D, 12.0D);
 
     public PlaceableDrinkwareBlock(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any()
-                .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH)
-                .setValue(VARIANT, DrinkVariant.BEER_EMPTY)
-        );
+        this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(VARIANT, GlassVariant.BEER_EMPTY));
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext pContext) {
-        return this.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection().getOpposite());
+        return this.defaultBlockState().setValue(FACING, pContext.getHorizontalDirection().getOpposite());
     }
 
     @Override
@@ -56,7 +55,7 @@ public class PlaceableDrinkwareBlock extends Block implements EntityBlock {
         give.setCount(1);
         if (!player.getInventory().add(give)) player.drop(give, false);
 
-        drinkBE.setStoredStack(ItemStack.EMPTY);
+        drinkBE.setStoredStackAndDrinkVariant(ItemStack.EMPTY, DrinkVariant.BEER_EMPTY); // what's the point of this?
         level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
         level.playSound(null, pos, SoundEvents.METAL_BREAK, SoundSource.BLOCKS, 1.0F, 1.0F);
         return true;
@@ -64,11 +63,9 @@ public class PlaceableDrinkwareBlock extends Block implements EntityBlock {
 
     @Override
     public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!player.getAbilities().instabuild) {
-            if (level.getBlockEntity(pos) instanceof PlaceableDrinkwareBlockEntity drinkBE) {
-                ItemStack stored = drinkBE.getStoredStack();
-                if (!stored.isEmpty()) Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stored);
-            }
+        if (!player.getAbilities().instabuild && level.getBlockEntity(pos) instanceof PlaceableDrinkwareBlockEntity drinkBE) {
+            ItemStack stored = drinkBE.getStoredStack();
+            if (!stored.isEmpty()) Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stored);
         }
         super.playerWillDestroy(level, pos, state, player);
     }
@@ -77,9 +74,7 @@ public class PlaceableDrinkwareBlock extends Block implements EntityBlock {
     public boolean isCollisionShapeFullBlock(BlockState state, BlockGetter level, BlockPos pos) { return false; }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(BlockStateProperties.HORIZONTAL_FACING, VARIANT);
-    }
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) { builder.add(FACING, VARIANT); }
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) { return SHAPE; }
@@ -93,5 +88,20 @@ public class PlaceableDrinkwareBlock extends Block implements EntityBlock {
         ItemStack stored = drinkBE.getStoredStack();
         if (stored.isEmpty()) return ItemStack.EMPTY;
         return stored.copy();
+    }
+
+    public enum GlassVariant implements StringRepresentable {
+        BEER_EMPTY("beer_empty"),
+        WINE_EMPTY("wine_empty"),
+        WHISKY_EMPTY("whisky_empty"),
+        BRANDY_EMPTY("brandy_empty"),
+        SHOT_EMPTY("shot_empty");
+
+        private final String name;
+
+        GlassVariant(String name) { this.name = name; }
+
+        @Override
+        public String getSerializedName() { return name; }
     }
 }

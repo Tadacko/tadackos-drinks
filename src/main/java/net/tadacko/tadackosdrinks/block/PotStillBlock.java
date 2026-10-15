@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
@@ -36,17 +37,16 @@ import java.util.Collections;
 import java.util.List;
 
 public class PotStillBlock extends BaseEntityBlock {
+    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<CondenserPos> CONDENSER = EnumProperty.create("condenser", CondenserPos.class);
     public static final BooleanProperty CLOCK = BooleanProperty.create("clock");
-    private static final VoxelShape SHAPE = Block.box(
-            2.0D, 0.0D, 2.0D,
-            14.0D, 13.0D, 14.0D
-    );
+
+    private static final VoxelShape SHAPE = Block.box(2.0D, 0.0D, 2.0D, 14.0D, 13.0D, 14.0D);
     
     public PotStillBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
-                .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH)
+                .setValue(FACING, Direction.NORTH)
                 .setValue(CONDENSER, CondenserPos.NONE)
                 .setValue(CLOCK, false)
         );
@@ -55,103 +55,75 @@ public class PotStillBlock extends BaseEntityBlock {
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext pContext) {
         return this.defaultBlockState()
-                .setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection().getOpposite())
+                .setValue(FACING, pContext.getHorizontalDirection().getOpposite())
                 .setValue(CONDENSER, CondenserPos.NONE)
                 .setValue(CLOCK, false);
     }
 
     /** Scan the four horizontal neighbours and return the first CondenserPos found. */
     public static CondenserPos findCondenserDir(Level level, BlockPos pos) {
-        for (Direction dir : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
-            if (level.getBlockState(pos.relative(dir)).is(ModBlocks.CONDENSER.get())) {
-                return CondenserPos.fromDirection(dir);
-            }
-        }
+        for (Direction dir : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST})
+            if (level.getBlockState(pos.relative(dir)).is(ModBlocks.CONDENSER.get())) return CondenserPos.fromDirection(dir);
         return CondenserPos.NONE;
     }
 
     /** Re-evaluate which neighbour is a condenser and push the new state. */
     private static void refreshCondenserState(Level level, BlockPos pos, BlockState state) {
         CondenserPos found = findCondenserDir(level, pos);
-        if (state.getValue(CONDENSER) != found) {
-            level.setBlock(pos, state.setValue(CONDENSER, found), Block.UPDATE_ALL);
-        }
+        if (state.getValue(CONDENSER) != found) level.setBlock(pos, state.setValue(CONDENSER, found), Block.UPDATE_ALL);
     }
 
     @Override
     public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
         super.onPlace(state, level, pos, oldState, isMoving);
-        if (!level.isClientSide) {
-            refreshCondenserState(level, pos, state);
-        }
+        if (!level.isClientSide) refreshCondenserState(level, pos, state);
     }
 
     @Override
-    public void neighborChanged(BlockState state, Level level, BlockPos pos,
-                                Block block, BlockPos fromPos, boolean isMoving) {
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean isMoving) {
         super.neighborChanged(state, level, pos, block, fromPos, isMoving);
-        if (!level.isClientSide) {
-            refreshCondenserState(level, pos, state);
-        }
+        if (!level.isClientSide) refreshCondenserState(level, pos, state);
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos blockPos, Player player, InteractionHand hand, BlockHitResult result) {
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult result) {
         ItemStack held = player.getItemInHand(hand);
 
         if (!level.isClientSide) {
-            if (player.isCrouching()) {
-                if (state.getValue(CLOCK)) {
-                    level.setBlock(blockPos, state.setValue(CLOCK, false), 3);
+            if (player.isCrouching() && state.getValue(CLOCK)) {
+                level.setBlock(pos, state.setValue(CLOCK, false), 3);
 
-                    if (!player.isCreative()) {
-                        ItemStack clockStack = new ItemStack(Items.CLOCK);
-                        boolean added = player.getInventory().add(clockStack);
-                        if (!added) {
-                            ItemEntity drop = new ItemEntity(level, blockPos.getX() + 0.5, blockPos.getY() + 1.0, blockPos.getZ() + 0.5,
-                                    clockStack);
-                            level.addFreshEntity(drop);
-                        }
+                if (!player.isCreative()) {
+                    ItemStack clockStack = new ItemStack(Items.CLOCK);
+                    if (!player.getInventory().add(clockStack)) {
+                        ItemEntity drop = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, clockStack);
+                        level.addFreshEntity(drop);
                     }
-
-                    return InteractionResult.SUCCESS;
                 }
+                return InteractionResult.SUCCESS;
             }
 
-            if (held.is(Items.CLOCK)) {
-                if (!state.getValue(CLOCK)) {
-                    level.setBlock(blockPos, state.setValue(CLOCK, true), 3);
-                    if (!player.isCreative()) held.shrink(1);
-                    return InteractionResult.SUCCESS;
-                }
+            if (held.is(Items.CLOCK) && !state.getValue(CLOCK)) {
+                level.setBlock(pos, state.setValue(CLOCK, true), 3);
+                if (!player.isCreative()) held.shrink(1);
+                return InteractionResult.SUCCESS;
             }
 
-            BlockEntity be = level.getBlockEntity(blockPos);
-            if (be instanceof PotStillBlockEntity still) {
-                if (still.handleRightClick(player, hand)) {
-                    return InteractionResult.SUCCESS;
-                }
-            }
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof PotStillBlockEntity still && still.handleRightClick(player, hand)) return InteractionResult.SUCCESS;
         }
-
         return InteractionResult.CONSUME;
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(BlockStateProperties.HORIZONTAL_FACING, CONDENSER, CLOCK);
-    }
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) { builder.add(FACING, CONDENSER, CLOCK); }
 
     @Override
-    public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
-    }
+    public RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
 
     @Nullable
     @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new PotStillBlockEntity(pos, state);
-    }
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) { return new PotStillBlockEntity(pos, state); }
 
     @Nullable
     @Override
@@ -160,14 +132,10 @@ public class PotStillBlock extends BaseEntityBlock {
     }
 
     @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
-    }
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) { return SHAPE; }
 
     @Override
-    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
-    }
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) { return SHAPE; }
 
     @Override
     public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
@@ -181,7 +149,6 @@ public class PotStillBlock extends BaseEntityBlock {
             stack.getOrCreateTag().put("BlockEntityTag", tag);
             return Collections.singletonList(stack);
         }
-
         // fallback to loot table
         return super.getDrops(state, builder);
     }

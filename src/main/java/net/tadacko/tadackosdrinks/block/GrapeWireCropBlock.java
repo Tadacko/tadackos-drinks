@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.BonemealableBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
@@ -32,24 +33,21 @@ import java.util.function.Supplier;
 
 public class GrapeWireCropBlock extends Block implements BonemealableBlock {
     public static final IntegerProperty AGE = IntegerProperty.create("age", 0, 1);
-    public static final DirectionProperty FACING = DirectionProperty.create("facing", Direction.Plane.HORIZONTAL);
+    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     private static final VoxelShape SHAPE_NORTH_SOUTH = Block.box(4.0D, 4.0D, 0.0D, 12.0D, 12.0D, 16.0D);
     private static final VoxelShape SHAPE_EAST_WEST = Block.box(0.0D, 4.0D, 4.0D, 16.0D, 12.0D, 12.0D);
 
-    public static int grapeFruitTime = 20;  // fallback default, overridden by config value
+    public static int grapeFruitTime = 20; // fallback default, overridden by config value
 
-    public static final IntegerProperty UNSUPPORTED = IntegerProperty.create("unsupported", 0, 2);
-    // how many scheduled ticks without support before breaking
-    private static final int UNSUPPORTED_THRESHOLD = 2;
-    private static final int CHECK_DELAY = 1; // check every tick while unsupported
+    private static final int SUPPORT_CHECK_DELAY = 2; // ticks to wait before verifying support
 
     private final Supplier<Item> grapeItem;
     private final Supplier<Block> sameVariantWire;
 
     public GrapeWireCropBlock(Properties properties, Supplier<Item> grapeItem, Supplier<Block> sameVariantWire) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(AGE, 0).setValue(FACING, Direction.NORTH).setValue(UNSUPPORTED, 0));
+        this.registerDefaultState(this.stateDefinition.any().setValue(AGE, 0).setValue(FACING, Direction.NORTH));
         this.grapeItem = grapeItem;
         this.sameVariantWire = sameVariantWire;
     }
@@ -61,7 +59,7 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) { builder.add(AGE, FACING, UNSUPPORTED); }
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) { builder.add(AGE, FACING); }
 
     @Override
     public void randomTick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
@@ -109,23 +107,6 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    @Nullable
-    @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        BlockPos pos = context.getClickedPos();
-        Level level = context.getLevel();
-        BlockState state = this.defaultBlockState();
-
-        for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BlockState neigh = level.getBlockState(pos.relative(dir));
-            if (neigh.getBlock() instanceof GrapeWireCropBlock) {
-                state = state.setValue(FACING, neigh.getValue(FACING));
-                break;
-            }
-        }
-        return state;
-    }
-
     @Override
     public boolean isRandomlyTicking(BlockState state) { return true; }
 
@@ -141,15 +122,14 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
     }
 
     @Override
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block changedBlock, BlockPos fromPos, boolean isMoving) {
-        super.neighborChanged(state, level, pos, changedBlock, fromPos, isMoving);
-        if (level.isClientSide) return;
+    public BlockState updateShape(BlockState state, Direction dir, BlockState neighborState, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+        if (dir.getAxis().isHorizontal()) {
+            Direction.Axis axis = state.getValue(FACING).getAxis();
+            if (!isLineConnectedToGround(level, pos, axis)) breakLine(level, pos, axis);
 
-        Direction.Axis axis = state.getValue(FACING).getAxis();
-        boolean connected = isLineConnectedToGround(level, pos, axis);
-        if (!connected) breakLine(level, pos, axis);
-
-        level.scheduleTick(pos, this, CHECK_DELAY);
+            level.scheduleTick(pos, this, SUPPORT_CHECK_DELAY);
+        }
+        return super.updateShape(state, dir, neighborState, level, pos, neighborPos);
     }
 
     @Override
@@ -187,9 +167,9 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (newState.isAir() && level instanceof ServerLevel serverLevel) {
             serverLevel.getServer().execute(() -> {
-                BlockState trellisWire = ModBlocks.TRELLIS_WIRE.get().defaultBlockState().setValue(TrellisWireBlock.FACING, state.getValue(FACING));
-                level.setBlock(pos, trellisWire, Block.UPDATE_ALL);
-                level.scheduleTick(pos, ModBlocks.TRELLIS_WIRE.get(), CHECK_DELAY);
+                level.setBlock(pos, ModBlocks.TRELLIS_WIRE.get().defaultBlockState().setValue(TrellisWireBlock.FACING, state.getValue(FACING)),
+                        Block.UPDATE_ALL);
+                level.scheduleTick(pos, ModBlocks.TRELLIS_WIRE.get(), SUPPORT_CHECK_DELAY);
             });
         }
         super.onRemove(state, level, pos, newState, isMoving);
@@ -197,25 +177,7 @@ public class GrapeWireCropBlock extends Block implements BonemealableBlock {
 
     @Override
     public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource rand) {
-        boolean survives = this.canSurvive(state, level, pos);
-
-        int unsupported = state.getValue(UNSUPPORTED);
-
-        if (survives) {
-            if (unsupported != 0) {
-                BlockState reset = state.setValue(UNSUPPORTED, 0);
-                level.setBlock(pos, reset, Block.UPDATE_ALL);
-            }
-            return;
-        }
-
-        // still unsupported: increment counter
-        int next = Math.min(UNSUPPORTED_THRESHOLD, unsupported + CHECK_DELAY);
-        BlockState updated = state.setValue(UNSUPPORTED, next);
-        level.setBlock(pos, updated, Block.UPDATE_ALL);
-
-        if (next == UNSUPPORTED_THRESHOLD) level.destroyBlock(pos, true);
-        else level.scheduleTick(pos, this, CHECK_DELAY);
+        if (!this.canSurvive(state, level, pos)) level.destroyBlock(pos, true);
     }
 
     @Override

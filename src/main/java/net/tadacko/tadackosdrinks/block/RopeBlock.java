@@ -18,21 +18,16 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import net.tadacko.tadackosdrinks.item.ModItems;
 
 public class RopeBlock extends Block {
-    public static final IntegerProperty UNSUPPORTED = IntegerProperty.create("unsupported", 0, 2);
-    // how many scheduled ticks without support before breaking
-    private static final int UNSUPPORTED_THRESHOLD = 2;
-    private static final int CHECK_DELAY = 1; // check every tick while unsupported
+    private static final int SUPPORT_CHECK_DELAY = 2; // ticks to wait before verifying support
 
     public RopeBlock(Properties pProperties) {
         super(pProperties);
-        this.registerDefaultState(this.stateDefinition.any()
-                .setValue(UNSUPPORTED, 0));
+        this.registerDefaultState(this.stateDefinition.any());
     }
 
     @Override
     public boolean canSurvive(BlockState pState, LevelReader pLevel, BlockPos pPos) {
-        return pLevel.getBlockState(pPos.above()).getBlock() instanceof TrellisBlock ||
-               pLevel.getBlockState(pPos.above()).is(ModBlocks.ROPE.get());
+        return pLevel.getBlockState(pPos.above()).getBlock() instanceof TrellisBlock || pLevel.getBlockState(pPos.above()).is(ModBlocks.ROPE.get());
     }
 
     @Override
@@ -41,11 +36,9 @@ public class RopeBlock extends Block {
     }
 
     @Override
-    public BlockState updateShape(BlockState pState, Direction pDirection, BlockState pNeighborState, LevelAccessor pLevel, BlockPos pPos, BlockPos pNeighborPos) {
-        if (pDirection == Direction.UP) {
-            pLevel.scheduleTick(pPos, this, CHECK_DELAY);
-        }
-        return super.updateShape(pState, pDirection, pNeighborState, pLevel, pPos, pNeighborPos);
+    public BlockState updateShape(BlockState state, Direction dir, BlockState neighborState, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+        if (dir == Direction.UP) level.scheduleTick(pos, this, SUPPORT_CHECK_DELAY);
+        return super.updateShape(state, dir, neighborState, level, pos, neighborPos);
     }
 
     @Override
@@ -55,32 +48,7 @@ public class RopeBlock extends Block {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> pBuilder) {
-        pBuilder.add(UNSUPPORTED);
-    }
-
-    @Override
     public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource rand) {
-        boolean survives = this.canSurvive(state, level, pos);
-        int unsupported = state.getValue(UNSUPPORTED);
-
-        if (survives) {
-            if (unsupported != 0) {
-                BlockState reset = state.setValue(UNSUPPORTED, 0);
-                level.setBlock(pos, reset, Block.UPDATE_ALL);
-            }
-            return;
-        }
-
-        // still unsupported: increment counter
-        int next = Math.min(UNSUPPORTED_THRESHOLD, unsupported + CHECK_DELAY);
-        BlockState updated = state.setValue(UNSUPPORTED, next);
-        level.setBlock(pos, updated, Block.UPDATE_ALL);
-
-        if (next == UNSUPPORTED_THRESHOLD) {
-            level.destroyBlock(pos, true);
-        } else {
-            level.scheduleTick(pos, this, CHECK_DELAY);
-        }
+        if (!this.canSurvive(state, level, pos)) level.destroyBlock(pos, true);
     }
 }

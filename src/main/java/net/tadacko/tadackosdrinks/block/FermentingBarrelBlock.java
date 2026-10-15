@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.BlockHitResult;
@@ -38,12 +38,11 @@ import java.util.Collections;
 import java.util.List;
 
 public class FermentingBarrelBlock extends BaseEntityBlock {
-    public static final EnumProperty<BarrelState> STATE = EnumProperty.create("state", BarrelState.class);
+    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final BooleanProperty CLOSED = BooleanProperty.create("closed");
     public static final BooleanProperty CLOCK = BooleanProperty.create("clock");
-    private static final VoxelShape SHAPE = Block.box(
-            1.0D, 0.0D, 1.0D,
-            15.0D, 16.0D, 15.0D
-    );
+
+    private static final VoxelShape SHAPE = Block.box(1.0D, 0.0D, 1.0D, 15.0D, 16.0D, 15.0D);
     private static final VoxelShape SHAPE_OPEN = Shapes.or(
             Block.box(1.0D, 0.0D, 1.0D, 15.0D, 1.0D, 15.0D),  // Bottom
             Block.box(1.0D, 1.0D, 1.0D, 15.0D, 16.0D, 2.0D),  // North wall
@@ -57,8 +56,8 @@ public class FermentingBarrelBlock extends BaseEntityBlock {
     public FermentingBarrelBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
-                .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH)
-                .setValue(STATE, BarrelState.OPEN)
+                .setValue(FACING, Direction.NORTH)
+                .setValue(CLOSED, false)
                 .setValue(CLOCK, false)
         );
     }
@@ -66,69 +65,50 @@ public class FermentingBarrelBlock extends BaseEntityBlock {
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext pContext) {
         return this.defaultBlockState()
-                .setValue(BlockStateProperties.HORIZONTAL_FACING, pContext.getHorizontalDirection().getOpposite())
-                .setValue(STATE, BarrelState.OPEN)
+                .setValue(FACING, pContext.getHorizontalDirection().getOpposite())
+                .setValue(CLOSED, false)
                 .setValue(CLOCK, false);
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos blockPos,
-                                 Player player, InteractionHand hand, BlockHitResult result) {
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult result) {
         ItemStack held = player.getItemInHand(hand);
 
         if (!level.isClientSide) {
-            if (player.isCrouching()) {
-                if (state.getValue(CLOCK)) {
-                    level.setBlock(blockPos, state.setValue(CLOCK, false), Block.UPDATE_ALL);
+            if (player.isCrouching() && state.getValue(CLOCK)) {
+                level.setBlock(pos, state.setValue(CLOCK, false), Block.UPDATE_ALL);
 
-                    if (!player.isCreative()) {
-                        ItemStack clockStack = new ItemStack(Items.CLOCK);
-                        boolean added = player.getInventory().add(clockStack);
-                        if (!added) {
-                            ItemEntity drop = new ItemEntity(level, blockPos.getX() + 0.5, blockPos.getY() + 1.0, blockPos.getZ() + 0.5,
-                                    clockStack);
-                            level.addFreshEntity(drop);
-                        }
+                if (!player.isCreative()) {
+                    ItemStack clockStack = new ItemStack(Items.CLOCK);
+                    if (!player.getInventory().add(clockStack)) {
+                        ItemEntity drop = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, clockStack);
+                        level.addFreshEntity(drop);
                     }
-
-                    return InteractionResult.SUCCESS;
                 }
+                return InteractionResult.SUCCESS;
             }
 
-            if (held.is(Items.CLOCK)) {
-                if (!state.getValue(CLOCK)) {
-                    level.setBlock(blockPos, state.setValue(CLOCK, true), Block.UPDATE_ALL);
-                    if (!player.isCreative()) held.shrink(1);
-                    return InteractionResult.SUCCESS;
-                }
+            if (held.is(Items.CLOCK) && !state.getValue(CLOCK)) {
+                level.setBlock(pos, state.setValue(CLOCK, true), Block.UPDATE_ALL);
+                if (!player.isCreative()) held.shrink(1);
+                return InteractionResult.SUCCESS;
             }
 
-            BlockEntity be = level.getBlockEntity(blockPos);
-            if (be instanceof FermentingBarrelBlockEntity barrel) {
-                if (barrel.handleRightClick(player, hand)) {
-                    return InteractionResult.SUCCESS;
-                }
-            }
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof FermentingBarrelBlockEntity barrel && barrel.handleRightClick(player, hand)) return InteractionResult.SUCCESS;
         }
-
         return InteractionResult.CONSUME;
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(BlockStateProperties.HORIZONTAL_FACING, STATE, CLOCK);
-    }
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) { builder.add(FACING, CLOSED, CLOCK); }
 
     @Override
-    public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
-    }
+    public RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
 
     @Nullable
     @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new FermentingBarrelBlockEntity(pos, state);
-    }
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) { return new FermentingBarrelBlockEntity(pos, state); }
 
     @Nullable
     @Override
@@ -137,22 +117,14 @@ public class FermentingBarrelBlock extends BaseEntityBlock {
     }
 
     @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
-    }
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) { return SHAPE; }
 
     @Override
-    public boolean isCollisionShapeFullBlock(BlockState state, BlockGetter level, BlockPos pos) {
-        return false;
-    }
+    public boolean isCollisionShapeFullBlock(BlockState state, BlockGetter level, BlockPos pos) { return false; }
 
     @Override
     public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        BarrelState barrelState = state.getValue(STATE);
-        return switch (barrelState) {
-            case CLOSED, YEAST -> SHAPE;
-            default -> SHAPE_OPEN;
-        };
+        return state.getValue(CLOSED) ? SHAPE : SHAPE_OPEN;
     }
 
     @Override
@@ -167,7 +139,6 @@ public class FermentingBarrelBlock extends BaseEntityBlock {
             stack.getOrCreateTag().put("BlockEntityTag", tag);
             return Collections.singletonList(stack);
         }
-
         // fallback to loot table
         return super.getDrops(state, builder);
     }
@@ -176,21 +147,14 @@ public class FermentingBarrelBlock extends BaseEntityBlock {
     public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
         if (level.isClientSide) return;
 
-        if (throwIngredientBarrel) {
-            if (entity instanceof ItemEntity itemEntity) {
-                ItemStack stack = itemEntity.getItem();
+        if (throwIngredientBarrel && entity instanceof ItemEntity itemEntity) {
+            ItemStack stack = itemEntity.getItem();
 
-                if (level.getBlockEntity(pos) instanceof FermentingBarrelBlockEntity blockEntity) {
-                    if (blockEntity.handleItemEntityCollision(stack)) {
-                        stack.shrink(1);
-                        if (stack.isEmpty()) {
-                            itemEntity.discard();
-                        }
-                    }
-                }
+            if (level.getBlockEntity(pos) instanceof FermentingBarrelBlockEntity blockEntity && blockEntity.handleItemEntityCollision(stack)) {
+                stack.shrink(1);
+                if (stack.isEmpty()) itemEntity.discard();
             }
         }
-
         super.entityInside(state, level, pos, entity);
     }
 }

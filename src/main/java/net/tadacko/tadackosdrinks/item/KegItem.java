@@ -31,6 +31,7 @@ import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandlerItem;
 import net.minecraftforge.fluids.capability.templates.FluidHandlerItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.tadacko.tadackosdrinks.TadackosDrinks;
 import net.tadacko.tadackosdrinks.block.ModBlocks;
 import net.tadacko.tadackosdrinks.block.PlaceableDrinkwareBlock;
 import net.tadacko.tadackosdrinks.block.entity.KegBlockEntity;
@@ -44,10 +45,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class KegItem extends Item {
-
-    public KegItem(Properties properties) {
-        super(properties);
-    }
+    public KegItem(Properties properties) { super(properties); }
 
     @Override
     public ICapabilityProvider initCapabilities(ItemStack stack, @Nullable CompoundTag nbt) {
@@ -106,63 +104,48 @@ public class KegItem extends Item {
         CauldronFluidRegistry.Entry cauldronEntry = CauldronFluidRegistry.getForBlock(clickedBlock);
 
         if (isEmptyCauldron || cauldronEntry != null) {
-            if (!level.isClientSide) {
-                Optional<IFluidHandlerItem> kegHandler = kegStack
-                        .getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).resolve();
-                if (kegHandler.isPresent()) {
-                    IFluidHandler.FluidAction kegAction = player.getAbilities().instabuild
-                            ? IFluidHandler.FluidAction.SIMULATE
-                            : IFluidHandler.FluidAction.EXECUTE;
+            if (level.isClientSide) return InteractionResult.sidedSuccess(true); // Client-side: return success optimistically so arm swings
+            Optional<IFluidHandlerItem> kegHandler = kegStack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).resolve();
+            if (kegHandler.isPresent()) {
+                IFluidHandler.FluidAction kegAction = player.getAbilities().instabuild
+                        ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE;
 
-                    if (cauldronEntry != null) {
-                        FluidStack toTransfer = new FluidStack(cauldronEntry.fluid(), cauldronEntry.amount());
-                        if (kegHandler.get().fill(toTransfer, IFluidHandler.FluidAction.SIMULATE) >= cauldronEntry.amount()) {
-                            kegHandler.get().fill(toTransfer, kegAction);
-                            level.setBlock(clickedPos, Blocks.CAULDRON.defaultBlockState(), 3);
-                            level.playSound(null, clickedPos, SoundEvents.BUCKET_FILL,
-                                    SoundSource.BLOCKS, 1.0F, 1.0F);
-                            return InteractionResult.sidedSuccess(false);
-                        }
-                    } else {
-                        FluidStack kegFluid = kegHandler.get()
-                                .drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE);
-                        if (!kegFluid.isEmpty()) {
-                            Block targetCauldron = CauldronFluidRegistry.getCauldronForFluid(kegFluid.getFluid());
-                            if (targetCauldron != null) {
-                                CauldronFluidRegistry.Entry targetEntry =
-                                        CauldronFluidRegistry.getForBlock(targetCauldron);
-                                if (kegFluid.getAmount() >= targetEntry.amount()) {
-                                    kegHandler.get().drain(
-                                            new FluidStack(kegFluid.getFluid(), targetEntry.amount()),
-                                            kegAction);
-                                    BlockState newState = targetCauldron.defaultBlockState();
-                                    // Water cauldron uses LEVEL; set to max so it appears full
-                                    if (newState.hasProperty(LayeredCauldronBlock.LEVEL)) {
-                                        int maxLevel = LayeredCauldronBlock.LEVEL.getPossibleValues()
-                                                .stream().mapToInt(Integer::intValue).max().orElse(1);
-                                        newState = newState.setValue(LayeredCauldronBlock.LEVEL, maxLevel);
-                                    }
-                                    level.setBlock(clickedPos, newState, 3);
-                                    level.playSound(null, clickedPos, SoundEvents.BUCKET_EMPTY,
-                                            SoundSource.BLOCKS, 1.0F, 1.0F);
-                                    return InteractionResult.sidedSuccess(false);
+                if (cauldronEntry != null) {
+                    FluidStack toTransfer = new FluidStack(cauldronEntry.fluid(), cauldronEntry.amount());
+                    if (kegHandler.get().fill(toTransfer, IFluidHandler.FluidAction.SIMULATE) >= cauldronEntry.amount()) {
+                        kegHandler.get().fill(toTransfer, kegAction);
+                        level.setBlock(clickedPos, Blocks.CAULDRON.defaultBlockState(), 3);
+                        level.playSound(null, clickedPos, SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 1.0F, 1.0F);
+                        return InteractionResult.sidedSuccess(false);
+                    }
+                } else {
+                    FluidStack kegFluid = kegHandler.get().drain(Integer.MAX_VALUE, IFluidHandler.FluidAction.SIMULATE);
+                    if (!kegFluid.isEmpty()) {
+                        Block targetCauldron = CauldronFluidRegistry.getCauldronForFluid(kegFluid.getFluid());
+                        if (targetCauldron != null) {
+                            CauldronFluidRegistry.Entry targetEntry = CauldronFluidRegistry.getForBlock(targetCauldron);
+                            if (kegFluid.getAmount() >= targetEntry.amount()) {
+                                kegHandler.get().drain(new FluidStack(kegFluid.getFluid(), targetEntry.amount()), kegAction);
+                                BlockState newState = targetCauldron.defaultBlockState();
+                                // Water cauldron uses LEVEL; set to max so it appears full
+                                if (newState.hasProperty(LayeredCauldronBlock.LEVEL)) {
+                                    newState = newState.setValue(LayeredCauldronBlock.LEVEL, LayeredCauldronBlock.LEVEL.getPossibleValues().stream()
+                                            .mapToInt(Integer::intValue).max().orElse(1));
                                 }
+                                level.setBlock(clickedPos, newState, 3);
+                                level.playSound(null, clickedPos, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 1.0F, 1.0F);
+                                return InteractionResult.sidedSuccess(false);
                             }
                         }
                     }
                 }
-            } else {
-                // Client-side: return success optimistically so the arm swings
-                return InteractionResult.sidedSuccess(true);
             }
         }
 
         // generic transfer
-        return FluidUtil.getFluidHandler(level, clickedPos, context.getClickedFace())
-                .map(blockHandler -> FluidUtil.interactWithFluidHandler(player, context.getHand(), blockHandler)
-                        ? InteractionResult.sidedSuccess(level.isClientSide)
-                        : InteractionResult.PASS)
-                .orElse(InteractionResult.PASS);
+        return FluidUtil.getFluidHandler(level, clickedPos, context.getClickedFace()).map(blockHandler ->
+                FluidUtil.interactWithFluidHandler(player, context.getHand(), blockHandler)
+                        ? InteractionResult.sidedSuccess(level.isClientSide) : InteractionResult.PASS).orElse(InteractionResult.PASS);
     }
 
     private InteractionResult placeKeg(UseOnContext context, BlockPos placePos) {
@@ -188,21 +171,24 @@ public class KegItem extends Item {
     // Updates the block entity's stored item AND the block's VARIANT property so the
     // rendered model (fluid level/colour) matches the new contents.
     private void updateDrinkwareBlock(Level level, BlockPos pos, BlockState state, PlaceableDrinkwareBlockEntity jarBE, Item resultItem) {
-        jarBE.setStoredStack(new ItemStack(resultItem));
-
-        if (resultItem instanceof PlaceableDrinkwareItem drinkwareItem)
-            level.setBlock(pos, state.setValue(PlaceableDrinkwareBlock.VARIANT, drinkwareItem.getVariant()), 3);
+        if (resultItem instanceof PlaceableDrinkwareItem drinkwareItem) {
+            PlaceableDrinkwareBlock.GlassVariant glassVariant = switch (drinkwareItem.getVariant()) {
+                case BEER_EMPTY, BEER, CIDER -> PlaceableDrinkwareBlock.GlassVariant.BEER_EMPTY;
+                case WINE_EMPTY, WINE_RED, WINE_ROSE, WINE_ORANGE, WINE_WHITE, MEAD -> PlaceableDrinkwareBlock.GlassVariant.WINE_EMPTY;
+                case WHISKY_EMPTY, WHISKY, RUM, RUM_AGED -> PlaceableDrinkwareBlock.GlassVariant.WHISKY_EMPTY;
+                case BRANDY_EMPTY, BRANDY -> PlaceableDrinkwareBlock.GlassVariant.BRANDY_EMPTY;
+                case SHOT_EMPTY, VODKA, GIN, TEQUILA, TEQUILA_AGED -> PlaceableDrinkwareBlock.GlassVariant.SHOT_EMPTY;
+            };
+            level.setBlock(pos, state.setValue(PlaceableDrinkwareBlock.VARIANT, glassVariant), 3);
+            jarBE.setStoredStackAndDrinkVariant(new ItemStack(resultItem), drinkwareItem.getVariant());
+        }
     }
 
     @Override
-    public boolean isBarVisible(ItemStack stack) {
-        return getFluidAmount(stack) > 0;
-    }
+    public boolean isBarVisible(ItemStack stack) { return getFluidAmount(stack) > 0; }
 
     @Override
-    public int getBarWidth(ItemStack stack) {
-        return Math.round(13.0F * getFluidAmount(stack) / KegBlockEntity.CAPACITY);
-    }
+    public int getBarWidth(ItemStack stack) { return Math.round(13.0F * getFluidAmount(stack) / KegBlockEntity.CAPACITY); }
 
     @Override
     public int getBarColor(ItemStack stack) {
@@ -229,9 +215,7 @@ public class KegItem extends Item {
         return FluidStack.EMPTY;
     }
 
-    private static int getFluidAmount(ItemStack stack) {
-        return getFluidStack(stack).getAmount();
-    }
+    private static int getFluidAmount(ItemStack stack) { return getFluidStack(stack).getAmount(); }
 
     private static Component getFluidName(FluidStack fluidStack) {
         ResourceLocation id = ForgeRegistries.FLUIDS.getKey(fluidStack.getFluid());
