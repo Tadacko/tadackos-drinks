@@ -3,7 +3,7 @@
 
 ## AI disclosure
 
-About 80% of the code is AI generated, everything else (models, textures, text, etc.) is made by me. This project is mainly a learning experience so I am slowly transitioning to writing most of the code myself as I learn.
+About 70% of the code is AI generated, everything else (models, textures, text, etc.) is made by me. This project is mainly a learning experience so I am slowly transitioning to writing most of the code myself as I learn.
 
 ## Requirements
 
@@ -11,7 +11,7 @@ Geckolib 4.7+
 
 ## Description
 
-Tadacko's Drinks is a Forge mod mainly focusing on semi-realistic implementation of alcoholic beverage production processes and the effects of alcohol. The drinks also have beneficial secondary effects (can be turned off in the config). Many features in this mod can be customized in the config (WIP). If you don't want to deal with config files you can use a mod like Configured or Forge Config Screens to access the config from the in-game GUI.
+Tadacko's Drinks is a Forge mod mainly focusing on semi-realistic implementation of alcoholic beverage production processes and the effects of alcohol. The drinks also have beneficial secondary effects (can be turned off in the config). Many features in this mod can be customized in the config. If you don't want to deal with config files you can use a mod like Configured or Forge Config Screens to access the config from the in-game GUI.
 
 ## Features
 
